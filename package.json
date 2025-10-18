@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "tauri": "WEBKIT_DISABLE_COMPOSITING_MODE=1 GDK_BACKEND=x11 tauri"
+    "tauri": "tauri"
   },
   "license": "MIT",
   "dependencies": {
