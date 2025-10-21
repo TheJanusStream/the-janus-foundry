@@ -392,13 +392,16 @@ async function getTreeAsSourceJson(): Promise<SourceJsonNode | null> {
 
 /**
  * Generates and triggers a download for both the source.json and the crossref_index.json files.
+ * @returns A promise that resolves with an array of the generated filenames.
  */
-export async function exportAll() {
+export async function exportAll(): Promise<string[]> {
+    const exportedFilenames: string[] = [];
+
     // 1. Get the core data structure
     const rootNode = await getTreeAsSourceJson();
     if (!rootNode) {
         alert("Memory is empty. Nothing to export.");
-        return;
+        return []; // Return empty array if nothing was exported
     }
 
     // 2. Prepare and download the source.json
@@ -408,6 +411,7 @@ export async function exportAll() {
     const sourceFilename = `${baseName}-${sourceHash}.json`;
     const sourceBlob = new Blob([sourceJsonString], { type: "application/json" });
     triggerDownload(sourceBlob, sourceFilename);
+    exportedFilenames.push(sourceFilename);
 
     // 3. Prepare and download the crossref_index.json
     const crossRefData = await generateCrossReferences();
@@ -417,9 +421,12 @@ export async function exportAll() {
         const crossrefFilename = `${baseName}-${sourceHash}-crossref-${crossrefHash}.json`;
         const crossrefBlob = new Blob([crossrefJsonString], { type: "application/json" });
         triggerDownload(crossrefBlob, crossrefFilename);
+        exportedFilenames.push(crossrefFilename);
     } else {
         console.log("Skipping cross-reference export as there is not enough interconnected data.");
     }
+
+    return exportedFilenames;
 }
 
 /**

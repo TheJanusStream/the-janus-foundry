@@ -1,9 +1,14 @@
 <script lang="ts">
-  import { selectedNode, loadTree, type TreeNode, ancestorIds } from '$lib/store';
-  import { createNode, deleteNodeAndChildren } from '$lib/db';
+  import {
+    selectedNode,
+    loadTree,
+    type TreeNode,
+    ancestorIds,
+  } from "$lib/store";
+  import { createNode, deleteNodeAndChildren } from "$lib/db";
 
   export let node: TreeNode;
-  
+
   // Explicit state for user-driven expansion
   let expanded = false;
 
@@ -18,21 +23,25 @@
     expanded = !expanded;
     selectedNode.set(node);
   }
-  
+
   async function handleAddChild(event: MouseEvent) {
     event.stopPropagation();
     const newId = await createNode(node.id);
-    
+
     // Ensure the parent is expanded to show the new node
-    expanded = true; 
-    
+    expanded = true;
+
     await loadTree();
     // In a future step, we can find and select the new node
   }
 
   async function handleDelete(event: MouseEvent) {
     event.stopPropagation();
-    if (confirm(`Are you sure you want to PERMANENTLY DELETE "${node.name}" and all of its children?`)) {
+    if (
+      confirm(
+        `Are you sure you want to PERMANENTLY DELETE "${node.name}" and all of its children?`,
+      )
+    ) {
       await deleteNodeAndChildren(node.id);
       selectedNode.set(null);
       await loadTree();
@@ -43,25 +52,30 @@
   $: isActive = $selectedNode && $selectedNode.id === node.id;
   $: isAncestorOfSelected = $ancestorIds.has(node.id);
   $: isOpen = expanded || isAncestorOfSelected;
-
 </script>
 
 <div class="node" class:active={isActive}>
   <div class="row" on:click={handleSelect}>
     <div class="toggler" on:click={handleToggle}>
       {#if node.children.length > 0}
-        <span class="icon">{isOpen ? '−' : '+'}</span>
+        <span class="icon">{isOpen ? "−" : "+"}</span>
       {:else}
         <span class="icon dot">•</span>
       {/if}
     </div>
 
     <span class="name">{node.name}</span>
-    
+
     {#if isActive}
       <div class="actions">
-        <button class="add" on:click={handleAddChild} title="Add Child Node">+</button>
-        <button class="delete" on:click={handleDelete} title="Delete Node & Children">-</button>
+        <button class="add" on:click={handleAddChild} title="Add Child Node"
+          >+</button
+        >
+        <button
+          class="delete"
+          on:click={handleDelete}
+          title="Delete Node & Children">-</button
+        >
       </div>
     {/if}
   </div>
@@ -113,7 +127,7 @@
   .toggler:hover {
     background-color: #30363d;
   }
-  
+
   .icon {
     font-family: monospace;
     color: #8b949e;
@@ -145,7 +159,7 @@
     margin-left: auto; /* Pushes actions to the far right */
     padding-left: 10px;
   }
-  
+
   /* Action button styles remain the same */
   .actions button {
     background: #161b22;
@@ -166,8 +180,20 @@
   .actions button:hover {
     color: #161b22;
   }
-  .actions button.add { color: #8cc37a; border-color: #538d42; }
-  .actions button.add:hover { background-color: #8cc37a; border-color: #8cc37a; }
-  .actions button.delete { color: #e5534b; border-color: #b33d36; }
-  .actions button.delete:hover { background-color: #e5534b; border-color: #e5534b; }
+  .actions button.add {
+    color: #8cc37a;
+    border-color: #538d42;
+  }
+  .actions button.add:hover {
+    background-color: #8cc37a;
+    border-color: #8cc37a;
+  }
+  .actions button.delete {
+    color: #e5534b;
+    border-color: #b33d36;
+  }
+  .actions button.delete:hover {
+    background-color: #e5534b;
+    border-color: #e5534b;
+  }
 </style>

@@ -92,6 +92,21 @@
     }
   }
 
+  async function handleExport() {
+    try {
+      const filenames = await exportAll();
+      if (filenames.length > 0) {
+        alert(
+          "Snapshot saved to your browser's default download directory:\n\n- " +
+            filenames.join("\n- "),
+        );
+      }
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Export failed. See console for details.");
+    }
+  }
+
   onMount(async () => {
     const count = await db.nodes.count();
     if (count === 0) {
@@ -167,7 +182,7 @@
       <button on:click={handleApplyPatch} title="Apply Patch from Clipboard">
         <img src="/apply_patch_icon.png" alt="Apply Patch" />
       </button>
-      <button on:click={exportAll} title="Save Snapshot (Core + Crossref)">
+      <button on:click={handleExport} title="Save Snapshot (Core + Crossref)">
         <img src="/save_core_icon.png" alt="Save Core" />
       </button>
       <button
