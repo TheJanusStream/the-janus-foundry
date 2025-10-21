@@ -9,10 +9,8 @@
 
   export let node: TreeNode;
 
-  // Explicit state for user-driven expansion
   let expanded = false;
 
-  // --- REFACTORED LOGIC ---
   function handleSelect(event: MouseEvent) {
     event.stopPropagation();
     selectedNode.set(node);
@@ -48,7 +46,6 @@
     }
   }
 
-  // --- NEW REACTIVE LOGIC FOR VISIBILITY ---
   $: isActive = $selectedNode && $selectedNode.id === node.id;
   $: isAncestorOfSelected = $ancestorIds.has(node.id);
   $: isOpen = expanded || isAncestorOfSelected;
@@ -83,7 +80,6 @@
   {#if node.children.length > 0 && isOpen}
     <div class="children">
       {#each node.children as child}
-        <!-- --- THIS IS THE FIX --- -->
         <svelte:self node={child} />
       {/each}
     </div>
@@ -92,7 +88,7 @@
 
 <style>
   .node {
-    padding-left: 20px; /* Indentation for all nodes */
+    padding-left: 20px;
     position: relative;
   }
 
@@ -150,17 +146,16 @@
 
   .children {
     border-left: 1px solid #30363d;
-    margin-left: 9px; /* Aligns line with the center of the toggler icon */
+    margin-left: 9px;
   }
 
   .actions {
     display: flex;
     gap: 6px;
-    margin-left: auto; /* Pushes actions to the far right */
+    margin-left: auto;
     padding-left: 10px;
   }
 
-  /* Action button styles remain the same */
   .actions button {
     background: #161b22;
     color: #e6edf3;
