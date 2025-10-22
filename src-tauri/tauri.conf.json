@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "The Janus Foundry",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "stream.janus.the.the-janus-foundry",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "The Janus Foundry",
+        "title": "The Janus Foundry v1.0.1",
         "width": 1200,
         "height": 600
       }
