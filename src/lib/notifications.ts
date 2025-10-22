@@ -12,13 +12,15 @@ export interface Notification {
 
 export const notifications = writable<Notification[]>([]);
 
-export function notify(message: string, type: NotificationType = 'info', timeout: number = 3000) {
+export function notify(message: string, type: NotificationType = 'info', timeout: number = 5000) {
     const id = Date.now();
     notifications.update((all) => [{ id, type, message, timeout }, ...all]);
 
-    setTimeout(() => {
-        dismissNotification(id);
-    }, timeout);
+    if (timeout > 0) {
+        setTimeout(() => {
+            dismissNotification(id);
+        }, timeout);
+    }
 }
 
 export function dismissNotification(id: number) {

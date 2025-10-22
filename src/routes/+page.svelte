@@ -72,25 +72,19 @@
   }
 
   async function handleResetToAgora() {
-    if (
-      confirm(
-        "Are you sure you want to reset the entire memory to the Agora template? All current data will be lost.",
-      )
-    ) {
-      try {
-        await seedDatabaseWithAgora();
-        await loadTree();
-        await loadCrossref();
-        const rootNodes = get(tree);
-        if (rootNodes.length > 0) {
-          selectedNode.set(rootNodes[0]);
-        } else {
-          selectedNode.set(null);
-        }
-        notify("Memory has been reset to the Agora template.", "success");
-      } catch (error) {
-        notify("Failed to reset to Agora template.", "error");
+    try {
+      await seedDatabaseWithAgora();
+      await loadTree();
+      await loadCrossref();
+      const rootNodes = get(tree);
+      if (rootNodes.length > 0) {
+        selectedNode.set(rootNodes[0]);
+      } else {
+        selectedNode.set(null);
       }
+      notify("Memory has been reset to the Agora template.", "success");
+    } catch (error) {
+      notify("Failed to reset to Agora template.", "error");
     }
   }
 
