@@ -21,7 +21,9 @@
   } from "$lib/io";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import NotificationDisplay from "$lib/components/NotificationDisplay.svelte";
+  import ConfirmModal from "$lib/components/ConfirmModal.svelte";
   import { notify } from "$lib/notifications";
+  import { modalStore } from "$lib/modal";
 
   let editMode = false;
   let editName = "";
@@ -147,6 +149,10 @@
 </script>
 
 <NotificationDisplay />
+
+{#if $modalStore.isOpen}
+  <ConfirmModal />
+{/if}
 
 <main class:orrery-minimized={orreryIsMinimized}>
   <div class="sidebar">

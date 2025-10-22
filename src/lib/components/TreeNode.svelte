@@ -6,6 +6,7 @@
     ancestorIds,
   } from "$lib/store";
   import { createNode, deleteNodeAndChildren } from "$lib/db";
+  import { modalStore } from "$lib/modal";
 
   export let node: TreeNode;
 
@@ -35,11 +36,10 @@
 
   async function handleDelete(event: MouseEvent) {
     event.stopPropagation();
-    if (
-      confirm(
-        `Are you sure you want to PERMANENTLY DELETE "${node.name}" and all of its children?`,
-      )
-    ) {
+    const confirmed = await modalStore.confirm(
+      `Are you sure you want to PERMANENTLY DELETE "${node.name}" and all of its children?\n\nThis action cannot be undone.`,
+    );
+    if (confirmed) {
       await deleteNodeAndChildren(node.id);
       selectedNode.set(null);
       await loadTree();
