@@ -2,6 +2,7 @@
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { db, type Node, deleteNodeAndChildren, updateNode } from './db';
 import { readText } from '@tauri-apps/plugin-clipboard-manager';
+import { notify } from "$lib/notifications";
 
 // --- INTERFACES ---
 export interface SourceJsonNode {
@@ -169,19 +170,15 @@ export async function importSourceJson(): Promise<void> {
                         await db.nodes.clear();
                         await db.nodes.bulkAdd(flatNodes);
                     });
-
-                    console.log(`Successfully imported ${flatNodes.length} nodes.`);
                     resolve();
 
                 } catch (error) {
-                    console.error("Failed to parse or import JSON file:", error);
-                    alert("Error: Failed to parse or import the selected JSON file. See console for details.");
+                    notify("Failed to parse or import the selected JSON file.", "error");
                     reject(error);
                 }
             };
             reader.onerror = (error) => {
-                console.error("File reading error:", error);
-                alert("Error: Failed to read the selected file.");
+                notify("Failed to read the selected file.", "error");
                 reject(error);
             };
 
@@ -190,7 +187,6 @@ export async function importSourceJson(): Promise<void> {
 
         input.addEventListener('cancel', () => {
             document.body.removeChild(input);
-            console.log("File selection cancelled by user.");
             reject(new Error("File selection cancelled."));
         });
 
@@ -201,8 +197,6 @@ export async function importSourceJson(): Promise<void> {
 export async function generateCrossReferences(): Promise<CrossRefIndex> {
     const allNodes = await db.nodes.toArray();
     if (allNodes.length < 2) return {};
-
-    console.log(`Processing ${allNodes.length} nodes for cross-ref generation.`);
 
     const nodesKeywords = new Map<string, Set<string>>();
     const uuidToTypeMap = new Map<string, string>();
@@ -306,8 +300,6 @@ export async function generateCrossReferences(): Promise<CrossRefIndex> {
         processedLinks.sort((a, b) => b.confidence - a.confidence);
         finalCrossrefIndex[uuid] = processedLinks.slice(0, MAX_LINKS_PER_NODE);
     }
-
-    console.log(`Generated cross-references for ${Object.keys(finalCrossrefIndex).length} nodes.`);
     return finalCrossrefIndex;
 }
 
@@ -386,7 +378,7 @@ async function getTreeAsSourceJson(): Promise<SourceJsonNode | null> {
             rootNode = sourceNode;
         }
     });
-    
+
     return rootNode;
 }
 
@@ -400,7 +392,7 @@ export async function exportAll(): Promise<string[]> {
     // 1. Get the core data structure
     const rootNode = await getTreeAsSourceJson();
     if (!rootNode) {
-        alert("Memory is empty. Nothing to export.");
+        notify("Memory is empty. Nothing to export.", "error");
         return []; // Return empty array if nothing was exported
     }
 
@@ -423,7 +415,7 @@ export async function exportAll(): Promise<string[]> {
         triggerDownload(crossrefBlob, crossrefFilename);
         exportedFilenames.push(crossrefFilename);
     } else {
-        console.log("Skipping cross-reference export as there is not enough interconnected data.");
+        notify("Skipping cross-reference export as there is not enough interconnected data.", "info");
     }
 
     return exportedFilenames;
@@ -511,11 +503,10 @@ export async function applyPatchFromClipboard(): Promise<void> {
                     }
                 }
             });
-            alert(`Successfully applied ${patchData.length} operations from the patch.`);
+            notify(`Successfully applied ${patchData.length} operations from the patch.`, "success");
         }
     } catch (error) {
-        console.error("Failed to apply patch:", error);
-        alert(`Failed to apply patch: ${error instanceof Error ? error.message : String(error)}`);
+        notify(`Failed to apply patch: ${error instanceof Error ? error.message : String(error)}`, "error");
         throw error;
     }
 }
@@ -540,12 +531,8 @@ export async function seedDatabaseWithAgora(): Promise<void> {
             await db.nodes.clear();
             await db.nodes.bulkAdd(flatNodes);
         });
-
-        console.log(`Successfully seeded database with ${flatNodes.length} nodes from Agora.json.`);
-
     } catch (error) {
-        console.error("Failed to seed database from Agora.json:", error);
-        alert("Error: Could not load the default Agora template. Make sure 'Agora.json' is in the /static folder.");
+        notify("Could not load the default Agora template.", "error");
         throw error;
     }
 }

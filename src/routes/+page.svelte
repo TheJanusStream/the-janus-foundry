@@ -20,6 +20,8 @@
     seedDatabaseWithAgora,
   } from "$lib/io";
   import { openUrl } from "@tauri-apps/plugin-opener";
+  import NotificationDisplay from "$lib/components/NotificationDisplay.svelte";
+  import { notify } from "$lib/notifications";
 
   let editMode = false;
   let editName = "";
@@ -85,9 +87,9 @@
         } else {
           selectedNode.set(null);
         }
-        alert("Memory has been reset to the Agora template.");
+        notify("Memory has been reset to the Agora template.", "success");
       } catch (error) {
-        console.error("Failed to reset to Agora template:", error);
+        notify("Failed to reset to Agora template.", "error");
       }
     }
   }
@@ -96,22 +98,20 @@
     try {
       const filenames = await exportAll();
       if (filenames.length > 0) {
-        alert(
+        notify(
           "Snapshot saved to your browser's default download directory:\n\n- " +
             filenames.join("\n- "),
+          "success",
         );
       }
     } catch (error) {
-      console.error("Export failed:", error);
-      alert("Export failed. See console for details.");
+      notify("Export failed.", "error");
     }
   }
 
   onMount(async () => {
     const count = await db.nodes.count();
     if (count === 0) {
-      // Automatically seed the database if it's the first run
-      console.log("Database is empty. Seeding with Agora template...");
       await seedDatabaseWithAgora();
     }
     await loadTree();
@@ -136,7 +136,7 @@
         selectedNode.set(null);
       }
     } catch (error) {
-      console.log("Import cancelled or failed.");
+      notify("Import cancelled or failed.", "error");
     }
   }
 
@@ -147,10 +147,12 @@
       await loadCrossref();
       selectedNode.set(null);
     } catch (error) {
-      console.log("Patch application cancelled or failed.");
+      notify("Patch application cancelled or failed.", "error");
     }
   }
 </script>
+
+<NotificationDisplay />
 
 <main class:orrery-minimized={orreryIsMinimized}>
   <div class="sidebar">
