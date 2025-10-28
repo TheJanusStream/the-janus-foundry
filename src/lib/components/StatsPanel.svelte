@@ -1,9 +1,39 @@
 <script lang="ts">
     import { flatNodeMap, crossref, selectedNode } from "$lib/store";
+    import { readText } from "@tauri-apps/plugin-clipboard-manager";
+    import { notify } from "$lib/notifications";
+    import { get } from "svelte/store";
 
     let isMinimized = true;
     function toggleMinimize() {
         isMinimized = !isMinimized;
+    }
+
+    async function handleJumpToNode() {
+        try {
+            const uuid = await readText();
+            if (!uuid || uuid.trim() === "") {
+                notify("Clipboard is empty.", "error");
+                return;
+            }
+            const trimmedUuid = uuid.trim();
+            const nodeMap = get(flatNodeMap);
+            if (nodeMap.has(trimmedUuid)) {
+                selectedNode.set(nodeMap.get(trimmedUuid) || null);
+                notify(`Jumped to node: ${trimmedUuid}`, "success");
+            } else {
+                notify(
+                    `Node with UUID "${trimmedUuid}" not found in memory.`,
+                    "error",
+                );
+            }
+        } catch (error) {
+            console.error("Failed to read clipboard:", error);
+            notify(
+                "Could not read from clipboard. Check application permissions.",
+                "error",
+            );
+        }
     }
 
     // --- DERIVED STATISTICS ---
@@ -70,10 +100,23 @@
 </script>
 
 <div class="stats-panel">
-    <button class="title" on:click={toggleMinimize} title="Toggle Vital Signs">
-        <span>VITAL SIGNS</span>
-        <span class="toggle-icon">{isMinimized ? "[+]" : "−"}</span>
-    </button>
+    <div class="panel-header">
+        <button
+            class="title"
+            on:click={toggleMinimize}
+            title="Toggle Vital Signs"
+        >
+            <span>VITAL SIGNS</span>
+            <span class="toggle-icon">{isMinimized ? "[+]" : "−"}</span>
+        </button>
+        <button
+            class="jump-button"
+            on:click={handleJumpToNode}
+            title="Jump to UUID from clipboard"
+        >
+            ➔
+        </button>
+    </div>
     {#if !isMinimized}
         <div class="panel-content">
             <div class="stats-grid">
@@ -114,23 +157,58 @@
         background-color: rgba(13, 17, 23, 0.7);
         font-size: 0.9em;
     }
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
     .title {
         color: #39c5cf;
         opacity: 0.7;
         letter-spacing: 2px;
         font-size: 0.8em;
-        margin: 0 0 10px 0;
-        text-align: center;
+        margin: 0;
+        text-align: left;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        flex-grow: 1;
+    }
+    .title:hover {
+        opacity: 1;
     }
 
     .toggle-icon {
         font-family: monospace;
         font-size: 1.2em;
     }
+    .jump-button {
+        background-color: transparent;
+        border: 1px solid #30363d;
+        color: #39c5cf;
+        border-radius: 4px;
+        width: 30px;
+        height: 24px;
+        font-size: 1.2em;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    .jump-button:hover {
+        border-color: #39c5cf;
+        background-color: #21262d;
+        color: #e6edf3;
+    }
 
-    /* When minimized, remove the bottom margin from the title */
-    :global(.stats-panel button.title:only-child) {
-        margin-bottom: 0;
+    .panel-content {
+        padding-top: 10px;
+        margin-top: 10px;
+        border-top: 1px solid #30363d;
     }
 
     .stats-grid {
@@ -163,17 +241,5 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-    }
-    button {
-        background: #161b22;
-        color: #8b949e;
-        border: 1px solid #30363d;
-        border-radius: 4px;
-        padding: 2px 6px;
-        cursor: pointer;
-        margin-left: 10px;
-    }
-    button:hover {
-        border-color: #39c5cf;
     }
 </style>
