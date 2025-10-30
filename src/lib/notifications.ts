@@ -15,12 +15,6 @@ export const notifications = writable<Notification[]>([]);
 export function notify(message: string, type: NotificationType = 'info', timeout: number = 5000) {
     const id = Date.now();
     notifications.update((all) => [{ id, type, message, timeout }, ...all]);
-
-    if (timeout > 0) {
-        setTimeout(() => {
-            dismissNotification(id);
-        }, timeout);
-    }
 }
 
 export function dismissNotification(id: number) {

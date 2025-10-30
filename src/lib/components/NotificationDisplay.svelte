@@ -2,11 +2,79 @@
 <script lang="ts">
     import { notifications, dismissNotification } from "$lib/notifications";
     import { fly, fade } from "svelte/transition";
+    import { onDestroy } from "svelte";
 
-    function handleClose(event: MouseEvent, id: number) {
-        event.stopPropagation();
+    let timers = new Map<
+        number,
+        { timerId: number; startTime: number; remaining: number }
+    >();
+
+    function handleClose(id: number) {
+        clearTimer(id);
         dismissNotification(id);
     }
+
+    function clearTimer(id: number) {
+        const timer = timers.get(id);
+        if (timer && timer.timerId) {
+            clearTimeout(timer.timerId);
+        }
+        timers.delete(id);
+    }
+
+    function pauseTimer(id: number) {
+        const timer = timers.get(id);
+        if (timer) {
+            clearTimeout(timer.timerId);
+            const elapsed = Date.now() - timer.startTime;
+            timer.remaining -= elapsed;
+            timers.set(id, timer);
+        }
+    }
+
+    function resumeTimer(id: number) {
+        const timer = timers.get(id);
+        if (timer && timer.remaining > 0) {
+            timer.startTime = Date.now();
+            const newTimerId = setTimeout(() => {
+                dismissNotification(id);
+                timers.delete(id);
+            }, timer.remaining);
+            timer.timerId = newTimerId as unknown as number;
+            timers.set(id, timer);
+        }
+    }
+
+    const unsubscribe = notifications.subscribe((allNotifications) => {
+        allNotifications.forEach((n) => {
+            if (!timers.has(n.id) && n.timeout > 0) {
+                const timerId = setTimeout(() => {
+                    dismissNotification(n.id);
+                    timers.delete(n.id);
+                }, n.timeout);
+
+                timers.set(n.id, {
+                    timerId: timerId as unknown as number,
+                    startTime: Date.now(),
+                    remaining: n.timeout,
+                });
+            }
+        });
+
+        const currentIds = new Set(allNotifications.map((n) => n.id));
+        for (const id of timers.keys()) {
+            if (!currentIds.has(id)) {
+                clearTimer(id);
+            }
+        }
+    });
+
+    onDestroy(() => {
+        for (const id of timers.keys()) {
+            clearTimeout(timers.get(id)?.timerId);
+        }
+        unsubscribe();
+    });
 </script>
 
 <div class="notification-container">
@@ -15,14 +83,23 @@
             class="toast {notification.type}"
             in:fly={{ y: 20, duration: 300 }}
             out:fade={{ duration: 300 }}
-            on:click={() => dismissNotification(notification.id)}
+            on:mouseenter={() => pauseTimer(notification.id)}
+            on:mouseleave={() => resumeTimer(notification.id)}
             role="alert"
             aria-live="assertive"
         >
-            <p>{notification.message}</p>
+            <div class="content">
+                <p>{notification.message}</p>
+                {#if notification.timeout > 0}
+                    <div
+                        class="timer-bar"
+                        style="--timer-duration: {notification.timeout}ms"
+                    ></div>
+                {/if}
+            </div>
             <button
                 class="close-button"
-                on:click={(e) => handleClose(e, notification.id)}
+                on:click={(e) => handleClose(notification.id)}
                 aria-label="Close notification"
             >
                 &times;
@@ -57,10 +134,20 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         cursor: pointer;
         min-width: 250px;
+        overflow: hidden; /* To contain the timer bar */
+    }
+
+    .toast:hover .timer-bar {
+        animation-play-state: paused;
+    }
+
+    .content {
+        flex-grow: 1;
     }
 
     .toast p {
         margin: 0;
+        margin-bottom: 8px; /* Space for the timer bar */
         white-space: pre-wrap;
         word-break: break-word;
     }
@@ -93,5 +180,22 @@
     .toast.info {
         background-color: #1e3a4c;
         border-left-color: #39c5cf;
+    }
+
+    .timer-bar {
+        height: 4px;
+        background-color: currentColor; /* Inherit color from border */
+        opacity: 0.5;
+        width: 100%;
+        animation: shrink var(--timer-duration, 5000ms) linear forwards;
+    }
+
+    @keyframes shrink {
+        from {
+            width: 100%;
+        }
+        to {
+            width: 0%;
+        }
     }
 </style>
