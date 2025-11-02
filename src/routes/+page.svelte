@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { get } from "svelte/store";
+  import { base } from '$app/paths';
   import {
     tree,
     selectedNode,
@@ -189,16 +190,16 @@
         on:click={handleImportCore}
         title="Load Core"
       >
-        <img src="/load_core_icon.png" alt="Load Core" />
+        <img src="{base}/load_core_icon.png" alt="Load Core" />
       </button>
       <button on:click={handleApplyPatch} title="Apply Patch from Clipboard">
-        <img src="/apply_patch_icon.png" alt="Apply Patch" />
+        <img src="{base}/apply_patch_icon.png" alt="Apply Patch" />
       </button>
       <button on:click={handleExport} title="Save Snapshot (Core + Crossref)">
-        <img src="/save_core_icon.png" alt="Save Core" />
+        <img src="{base}/save_core_icon.png" alt="Save Core" />
       </button>
       <button on:click={handleSupportClick} title="Support the Forge">
-        <img src="/support_janus_icon.png" alt="Support the Forge" />
+        <img src="{base}/support_janus_icon.png" alt="Support the Forge" />
       </button>
     </div>
   </div>

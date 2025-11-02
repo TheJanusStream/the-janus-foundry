@@ -2,6 +2,7 @@
 import { db, type Node, deleteNodeAndChildren, updateNode } from './db';
 import { notify } from "$lib/notifications";
 import { isTauri } from './utils';
+import { base } from '$app/paths';
 
 // --- INTERFACES ---
 export interface SourceJsonNode {
@@ -616,7 +617,7 @@ export async function applyPatchFromClipboard(): Promise<void> {
  */
 export async function seedDatabaseWithAgora(): Promise<void> {
     try {
-        const response = await fetch('/Agora.json');
+        const response = await fetch(`${base}/Agora.json`);
         if (!response.ok) {
             throw new Error(`Failed to fetch Agora.json: ${response.statusText}`);
         }
