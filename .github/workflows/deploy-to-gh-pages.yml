@@ -27,6 +27,8 @@ jobs:
 
       - name: Build SvelteKit static site
         run: npm run build
+        env:
+          IS_GH_PAGES: "true"
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
