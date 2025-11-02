@@ -1,4 +1,3 @@
-<!-- src/lib/components/NotificationDisplay.svelte -->
 <script lang="ts">
     import { notifications, dismissNotification } from "$lib/notifications";
     import { fly, fade } from "svelte/transition";

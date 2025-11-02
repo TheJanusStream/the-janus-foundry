@@ -3,7 +3,7 @@
   import ForceGraph from "force-graph";
   import { tree, selectedNode, crossref, flatNodeMap } from "$lib/store";
   import type { TreeNode } from "$lib/store";
-  import type { CrossRefIndex, CrossRefLink } from "$lib/io";
+  import type { CrossRefLink } from "$lib/io";
 
   let container: HTMLDivElement;
   let Graph: any = null;
@@ -130,8 +130,8 @@
       });
 
       if (initialLoad) {
-          setTimeout(() => Graph.zoomToFit(400, 100), 200);
-          initialLoad = false;
+        setTimeout(() => Graph.zoomToFit(400, 100), 200);
+        initialLoad = false;
       }
       setTimeout(() => {
         const graphNodes = Graph.graphData().nodes;
@@ -178,7 +178,6 @@
       relatedNodes = Array.from(relationsMap.values()).sort(
         (a, b) => b.confidence - a.confidence,
       );
-
     } else {
       Graph.graphData({ nodes: [], links: [] });
       relatedNodes = [];
@@ -211,7 +210,10 @@
         <ul>
           {#each relatedNodes as rel}
             <li on:click={() => handleSelectRelated(rel.target_id)}>
-              <span class="relation-type" title={`Confidence: ${rel.confidence}`}>
+              <span
+                class="relation-type"
+                title={`Confidence: ${rel.confidence}`}
+              >
                 {#if rel.direction === "out"}
                   {rel.relation.replace(/_/g, " ")}
                 {:else}
@@ -229,7 +231,14 @@
 
     <div class="controls">
       <label for="distance">Horizon: {neighborhoodDistance}</label>
-      <input type="range" id="distance" min="1" max="5" step="1" bind:value={neighborhoodDistance} />
+      <input
+        type="range"
+        id="distance"
+        min="1"
+        max="5"
+        step="1"
+        bind:value={neighborhoodDistance}
+      />
     </div>
   {/if}
 

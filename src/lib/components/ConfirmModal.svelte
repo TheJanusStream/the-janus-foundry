@@ -1,4 +1,3 @@
-<!-- src/lib/components/ConfirmModal.svelte -->
 <script lang="ts">
     import { modalStore } from "$lib/modal";
     import { fade } from "svelte/transition";

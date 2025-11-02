@@ -1,8 +1,8 @@
 <script lang="ts">
     import { flatNodeMap, crossref, selectedNode } from "$lib/store";
-    import { readText } from "@tauri-apps/plugin-clipboard-manager";
     import { notify } from "$lib/notifications";
     import { get } from "svelte/store";
+    import { isTauri } from "$lib/utils";
 
     let isMinimized = true;
     function toggleMinimize() {
@@ -11,7 +11,15 @@
 
     async function handleJumpToNode() {
         try {
-            const uuid = await readText();
+            let uuid: string;
+            if (isTauri()) {
+                const { readText } = await import(
+                    "@tauri-apps/plugin-clipboard-manager"
+                );
+                uuid = await readText();
+            } else {
+                uuid = await navigator.clipboard.readText();
+            }
             if (!uuid || uuid.trim() === "") {
                 notify("Clipboard is empty.", "error");
                 return;

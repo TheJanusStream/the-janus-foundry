@@ -12,14 +12,14 @@
   import TreeNode from "$lib/components/TreeNode.svelte";
   import Orrery from "$lib/components/Orrery.svelte";
   import StatsPanel from "$lib/components/StatsPanel.svelte";
-  import Exmarkdown from "svelte-exmarkdown"; // Replaced marked with svelte-exmarkdown
+  import Exmarkdown from "svelte-exmarkdown";
   import {
     exportAll,
     importSourceJson,
     applyPatchFromClipboard,
     seedDatabaseWithAgora,
   } from "$lib/io";
-  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { isTauri } from "$lib/utils";
   import NotificationDisplay from "$lib/components/NotificationDisplay.svelte";
   import ConfirmModal from "$lib/components/ConfirmModal.svelte";
   import { notify } from "$lib/notifications";
@@ -146,6 +146,16 @@
       notify("Patch application cancelled or failed.", "error");
     }
   }
+
+  async function handleSupportClick() {
+    const patreonUrl = "https://www.patreon.com/TheJanusStream";
+    if (isTauri()) {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl(patreonUrl);
+    } else {
+      window.open(patreonUrl, "_blank");
+    }
+  }
 </script>
 
 <NotificationDisplay />
@@ -187,12 +197,7 @@
       <button on:click={handleExport} title="Save Snapshot (Core + Crossref)">
         <img src="/save_core_icon.png" alt="Save Core" />
       </button>
-      <button
-        on:click={() => {
-          openUrl("https://www.patreon.com/TheJanusStream");
-        }}
-        title="Support the Forge"
-      >
+      <button on:click={handleSupportClick} title="Support the Forge">
         <img src="/support_janus_icon.png" alt="Support the Forge" />
       </button>
     </div>

@@ -1,8 +1,7 @@
 // src/lib/io.ts
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { db, type Node, deleteNodeAndChildren, updateNode } from './db';
-import { readText } from '@tauri-apps/plugin-clipboard-manager';
 import { notify } from "$lib/notifications";
+import { isTauri } from './utils';
 
 // --- INTERFACES ---
 export interface SourceJsonNode {
@@ -562,10 +561,21 @@ async function recursiveAddNode(
 
 /**
  * Reads a patch from the clipboard, validates it, and applies it to the database.
+ * This function is now environment-aware.
  */
 export async function applyPatchFromClipboard(): Promise<void> {
     try {
-        const clipboardText = await readText();
+        let clipboardText: string;
+
+        if (isTauri()) {
+            // Use Tauri's clipboard plugin when available
+            const { readText } = await import('@tauri-apps/plugin-clipboard-manager');
+            clipboardText = await readText();
+        } else {
+            // Use the standard Web Clipboard API as a fallback
+            clipboardText = await navigator.clipboard.readText();
+        }
+
         const patchData = JSON.parse(clipboardText);
 
         if (validatePatch(patchData)) {
@@ -577,7 +587,6 @@ export async function applyPatchFromClipboard(): Promise<void> {
                             await recursiveAddNode(op.node, op.parent_uuid, siblingCount);
                             break;
                         case 'remove':
-                            // We use our existing recursive delete to ensure the whole subtree is removed
                             await deleteNodeAndChildren(op.uuid);
                             break;
                         case 'replace':
