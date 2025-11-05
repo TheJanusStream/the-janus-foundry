@@ -636,3 +636,111 @@ export async function seedDatabaseWithAgora(): Promise<void> {
         throw error;
     }
 }
+
+/**
+ * Helper to recursively build a hierarchical SourceJsonNode tree from a flat list of nodes.
+ * @param nodeId The root ID of the subtree to build.
+ * @param allNodesMap A map of all nodes in the subtree for efficient lookup.
+ * @returns The constructed SourceJsonNode.
+ */
+function buildSourceTree(nodeId: string, allNodesMap: Map<string, Node>): SourceJsonNode {
+    const node = allNodesMap.get(nodeId)!;
+    const children = Array.from(allNodesMap.values())
+        .filter(n => n.parentId === nodeId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    return {
+        ID: node.id,
+        Name: node.name,
+        Type: node.type,
+        Description: node.description,
+        Items: children.map(child => buildSourceTree(child.id, allNodesMap))
+    };
+}
+
+/**
+ * Copies a node and its entire subtree to the clipboard in the SourceJsonNode format.
+ * @param nodeId The ID of the node to copy.
+ */
+export async function copyNodeToClipboard(nodeId: string): Promise<void> {
+    try {
+        const subtreeNodes = new Map<string, Node>();
+        const queue: string[] = [nodeId];
+        const visited = new Set<string>([nodeId]);
+        
+        let head = 0;
+        while(head < queue.length) {
+            const currentId = queue[head++];
+            const node = await db.nodes.get(currentId);
+            if (node) {
+                subtreeNodes.set(currentId, node);
+                const children = await db.nodes.where('parentId').equals(currentId).toArray();
+                for (const child of children) {
+                    if (!visited.has(child.id)) {
+                        visited.add(child.id);
+                        queue.push(child.id);
+                    }
+                }
+            }
+        }
+
+        if (subtreeNodes.size === 0) {
+            throw new Error("Node not found in database.");
+        }
+        
+        const sourceTree = buildSourceTree(nodeId, subtreeNodes);
+        const jsonString = JSON.stringify(sourceTree, null, 2);
+
+        if (isTauri()) {
+            const { writeText } = await import('@tauri-apps/plugin-clipboard-manager');
+            await writeText(jsonString);
+        } else {
+            await navigator.clipboard.writeText(jsonString);
+        }
+        
+        notify(`Copied "${sourceTree.Name}" and its ${subtreeNodes.size - 1} children to clipboard.`, 'success');
+
+    } catch (error) {
+        notify(`Failed to copy node: ${error instanceof Error ? error.message : String(error)}`, "error");
+        console.error(error);
+    }
+}
+
+/**
+ * Pastes a node structure from the clipboard as a child of the specified parent node.
+ * @param parentId The ID of the node to paste under.
+ */
+export async function pasteNodeFromClipboard(parentId: string): Promise<void> {
+    try {
+        let clipboardText: string;
+        if (isTauri()) {
+            const { readText } = await import('@tauri-apps/plugin-clipboard-manager');
+            clipboardText = await readText();
+        } else {
+            clipboardText = await navigator.clipboard.readText();
+        }
+
+        if (!clipboardText) {
+            throw new Error("Clipboard is empty.");
+        }
+
+        const nodeData: SourceJsonNode = JSON.parse(clipboardText);
+
+        // Basic validation
+        if (!nodeData.Name || !nodeData.Type || nodeData.Description === undefined || !nodeData.Items) {
+            throw new Error("Clipboard content is not a valid node structure.");
+        }
+
+        await db.transaction('rw', db.nodes, async () => {
+            const siblingCount = await db.nodes.where({ parentId: parentId }).count();
+            // We can reuse the recursiveAddNode function from the patch logic!
+            await recursiveAddNode(nodeData, parentId, siblingCount);
+        });
+
+        notify(`Pasted "${nodeData.Name}" as a new child node.`, "success");
+
+    } catch (error) {
+        notify(`Failed to paste: ${error instanceof Error ? error.message : String(error)}`, "error");
+        console.error(error);
+    }
+}

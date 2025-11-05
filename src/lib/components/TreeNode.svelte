@@ -8,6 +8,7 @@
     flatNodeMap,
   } from "$lib/store";
   import { createNode, deleteNodeAndChildren, reorderNode } from "$lib/db";
+  import { copyNodeToClipboard, pasteNodeFromClipboard } from "$lib/io";
   import { modalStore } from "$lib/modal";
   import { get } from "svelte/store";
 
@@ -52,6 +53,19 @@
     }
   }
 
+  async function handleCopy(event: MouseEvent) {
+    event.stopPropagation();
+    await copyNodeToClipboard(node.id);
+  }
+
+  async function handlePaste(event: MouseEvent) {
+    event.stopPropagation();
+    await pasteNodeFromClipboard(node.id);
+    expanded = true; // Ensure parent is open to show pasted node
+    await loadTree();
+    await loadCrossref();
+  }
+
   function handleDragStart(event: DragEvent) {
     event.stopPropagation();
     event.dataTransfer!.setData("text/plain", node.id);
@@ -64,17 +78,17 @@
     event.stopPropagation();
     if (!isDragging) {
       // Prevent self-drop visual artifacts
-      const target = event.currentTarget as HTMLDivElement;
-      const rect = target.getBoundingClientRect();
-      const y = event.clientY - rect.top;
+    const target = event.currentTarget as HTMLDivElement;
+    const rect = target.getBoundingClientRect();
+    const y = event.clientY - rect.top;
       const height = rect.height;
 
       if (y < height * 0.25) {
-        dropIndicator = "before";
+      dropIndicator = "before";
       } else if (y > height * 0.75) {
-        dropIndicator = "after";
-      } else {
-        dropIndicator = "on";
+      dropIndicator = "after";
+    } else {
+      dropIndicator = "on";
       }
     }
   }
@@ -129,7 +143,7 @@
     }
   }
 
-  function handleDragEnd(event: DragEvent) {
+  function handleDragEnd() {
     isDragging = false;
     dropIndicator = null;
   }
@@ -170,6 +184,12 @@
 
     {#if isActive}
       <div class="actions">
+        <button class="copy" on:click={handleCopy} title="Copy Subtree"
+          >📋</button
+        >
+        <button class="paste" on:click={handlePaste} title="Paste as Child"
+          >📥</button
+        >
         <button class="add" on:click={handleAddChild} title="Add Child Node"
           >+</button
         >
@@ -347,6 +367,42 @@
     background-color: #8cc37a;
     border-color: #8cc37a;
   }
+  .actions button.delete {
+    color: #e5534b;
+    border-color: #b33d36;
+  }
+  .actions button.delete:hover {
+    background-color: #e5534b;
+    border-color: #e5534b;
+  }
+
+  .actions button.copy {
+    color: #8884d8;
+    border-color: #5854a8;
+  }
+  .actions button.copy:hover {
+    background-color: #8884d8;
+    border-color: #8884d8;
+  }
+
+  .actions button.paste {
+    color: #82ca9d;
+    border-color: #529a6d;
+  }
+  .actions button.paste:hover {
+    background-color: #82ca9d;
+    border-color: #82ca9d;
+  }
+
+  .actions button.add {
+    color: #8cc37a;
+    border-color: #538d42;
+  }
+  .actions button.add:hover {
+    background-color: #8cc37a;
+    border-color: #8cc37a;
+  }
+
   .actions button.delete {
     color: #e5534b;
     border-color: #b33d36;
