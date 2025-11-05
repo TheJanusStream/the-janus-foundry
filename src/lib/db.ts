@@ -11,7 +11,7 @@ export interface Node {
 }
 
 export class JanusFoundryDB extends Dexie {
-  nodes!: Table<Node>; 
+  nodes!: Table<Node>;
 
   constructor() {
     super('JanusFoundry');
@@ -51,7 +51,7 @@ export async function createNode(parentId: string | null): Promise<string> {
   try {
     const siblingCount = await db.nodes.where({ parentId: parentId }).count();
     const newId = crypto.randomUUID();
-    
+
     const newNode: Node = {
       id: newId,
       parentId: parentId,
@@ -60,7 +60,7 @@ export async function createNode(parentId: string | null): Promise<string> {
       description: '',
       sortOrder: siblingCount, // Place it last among its siblings
     };
-    
+
     await db.nodes.add(newNode);
     console.log(`Node ${newId} created under parent ${parentId}.`);
     return newId;
@@ -81,7 +81,7 @@ export async function deleteNodeAndChildren(nodeId: string) {
       const queue: string[] = [nodeId];
 
       let head = 0;
-      while(head < queue.length) {
+      while (head < queue.length) {
         const currentId = queue[head++];
         if (!nodesToDelete.has(currentId)) {
           nodesToDelete.add(currentId);
@@ -91,7 +91,7 @@ export async function deleteNodeAndChildren(nodeId: string) {
           }
         }
       }
-      
+
       const idsToDelete = Array.from(nodesToDelete);
       await db.nodes.bulkDelete(idsToDelete);
       console.log(`Deleted ${idsToDelete.length} nodes starting from ${nodeId}.`);
@@ -100,4 +100,49 @@ export async function deleteNodeAndChildren(nodeId: string) {
     console.error(`Failed to delete subtree for node ${nodeId}:`, error);
     throw error;
   }
+}
+
+/**
+ * Atomically reorders a node, updating the sort order of affected siblings.
+ * @param sourceId The ID of the node being moved.
+ * @param newParentId The new parent's ID (or null for root).
+ * @param newSortOrder The target sort order within the new list of siblings.
+ */
+export async function reorderNode(sourceId: string, newParentId: string | null, newSortOrder: number): Promise<void> {
+  await db.transaction('rw', db.nodes, async () => {
+    const sourceNode = await db.nodes.get(sourceId);
+    if (!sourceNode) throw new Error("Source node not found");
+
+    const oldParentId = sourceNode.parentId;
+    const oldSortOrder = sourceNode.sortOrder;
+
+    if (oldParentId === newParentId && oldSortOrder === newSortOrder) {
+      return; // No change needed
+    }
+
+    // 1. Close the gap in the old location
+    const oldSiblingsToShift = await db.nodes
+      .where({ parentId: oldParentId })
+      .filter(n => n.sortOrder > oldSortOrder)
+      .toArray();
+
+    if (oldSiblingsToShift.length > 0) {
+      const updates = oldSiblingsToShift.map(n => ({ key: n.id, changes: { sortOrder: n.sortOrder - 1 } }));
+      await db.nodes.bulkUpdate(updates);
+    }
+
+    // 2. Make space in the new location
+    const newSiblingsToShift = await db.nodes
+      .where({ parentId: newParentId })
+      .filter(n => n.sortOrder >= newSortOrder)
+      .toArray();
+
+    if (newSiblingsToShift.length > 0) {
+      const updates = newSiblingsToShift.map(n => ({ key: n.id, changes: { sortOrder: n.sortOrder + 1 } }));
+      await db.nodes.bulkUpdate(updates);
+    }
+
+    // 3. Finally, move the node itself
+    await db.nodes.update(sourceId, { parentId: newParentId, sortOrder: newSortOrder });
+  });
 }

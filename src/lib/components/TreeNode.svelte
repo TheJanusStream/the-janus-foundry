@@ -2,15 +2,21 @@
   import {
     selectedNode,
     loadTree,
+    loadCrossref,
     type TreeNode,
     ancestorIds,
+    flatNodeMap,
   } from "$lib/store";
-  import { createNode, deleteNodeAndChildren } from "$lib/db";
+  import { createNode, deleteNodeAndChildren, reorderNode } from "$lib/db";
   import { modalStore } from "$lib/modal";
+  import { get } from "svelte/store";
 
   export let node: TreeNode;
 
   let expanded = false;
+
+  let dropIndicator: "before" | "after" | "on" | null = null;
+  let isDragging = false;
 
   function handleSelect(event: MouseEvent) {
     event.stopPropagation();
@@ -25,13 +31,10 @@
 
   async function handleAddChild(event: MouseEvent) {
     event.stopPropagation();
-    const newId = await createNode(node.id);
-
-    // Ensure the parent is expanded to show the new node
+    await createNode(node.id);
     expanded = true;
-
     await loadTree();
-    // In a future step, we can find and select the new node
+    await loadCrossref();
   }
 
   async function handleDelete(event: MouseEvent) {
@@ -41,9 +44,94 @@
     );
     if (confirmed) {
       await deleteNodeAndChildren(node.id);
-      selectedNode.set(null);
+      if ($selectedNode?.id === node.id) {
+        selectedNode.set(null);
+      }
       await loadTree();
+      await loadCrossref();
     }
+  }
+
+  function handleDragStart(event: DragEvent) {
+    event.stopPropagation();
+    event.dataTransfer!.setData("text/plain", node.id);
+    event.dataTransfer!.effectAllowed = "move";
+    isDragging = true;
+  }
+
+  function handleDragOver(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isDragging) {
+      // Prevent self-drop visual artifacts
+      const target = event.currentTarget as HTMLDivElement;
+      const rect = target.getBoundingClientRect();
+      const y = event.clientY - rect.top;
+      const height = rect.height;
+
+      if (y < height * 0.25) {
+        dropIndicator = "before";
+      } else if (y > height * 0.75) {
+        dropIndicator = "after";
+      } else {
+        dropIndicator = "on";
+      }
+    }
+  }
+
+  function handleDragLeave(event: DragEvent) {
+    event.stopPropagation();
+    dropIndicator = null;
+  }
+
+  async function handleDrop(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const sourceId = event.dataTransfer!.getData("text/plain");
+    const targetId = node.id;
+
+    // Prevent dropping a node on itself or one of its own children
+    const nodeMap = get(flatNodeMap);
+    let currentId: string | null = targetId;
+    while (currentId) {
+      if (currentId === sourceId) {
+        console.warn("Cannot drop a node onto itself or its descendant.");
+        dropIndicator = null;
+        return;
+      }
+      const parent = nodeMap.get(currentId);
+      currentId = parent ? parent.parentId : null;
+    }
+
+    let newParentId: string | null;
+    let newSortOrder: number;
+
+    if (dropIndicator === "on") {
+      newParentId = targetId;
+      newSortOrder = node.children.length;
+    } else {
+      newParentId = node.parentId;
+      newSortOrder =
+        dropIndicator === "before" ? node.sortOrder : node.sortOrder + 1;
+    }
+
+    const finalDropIndicator = dropIndicator;
+    dropIndicator = null;
+
+    try {
+      if (sourceId === targetId && finalDropIndicator !== "on") return;
+      await reorderNode(sourceId, newParentId, newSortOrder);
+      await loadTree();
+      await loadCrossref();
+    } catch (error) {
+      console.error("Drag and drop failed:", error);
+    }
+  }
+
+  function handleDragEnd(event: DragEvent) {
+    isDragging = false;
+    dropIndicator = null;
   }
 
   $: isActive = $selectedNode && $selectedNode.id === node.id;
@@ -51,16 +139,33 @@
   $: isOpen = expanded || isAncestorOfSelected;
 </script>
 
-<div class="node" class:active={isActive}>
-  <div class="row" on:click={handleSelect}>
-    <div class="toggler" on:click={handleToggle}>
-      {#if node.children.length > 0}
-        <span class="icon">{isOpen ? "−" : "+"}</span>
-      {:else}
-        <span class="icon dot">•</span>
-      {/if}
-    </div>
+<div class="node" class:active={isActive} class:is-dragging-node={isDragging}>
+  <div
+    class="drop-indicator-before"
+    class:visible={dropIndicator === "before"}
+  ></div>
 
+  <!-- FIX: Toggler is now a sibling of the row, not a child -->
+  <div class="toggler" on:click={handleToggle}>
+    {#if node.children.length > 0}
+      <span class="icon">{isOpen ? "−" : "+"}</span>
+    {:else}
+      <span class="icon dot">•</span>
+    {/if}
+  </div>
+
+  <div
+    class="row"
+    class:drop-on={dropIndicator === "on"}
+    on:click={handleSelect}
+    draggable="true"
+    on:dragstart={handleDragStart}
+    on:dragover={handleDragOver}
+    on:dragleave={handleDragLeave}
+    on:drop={handleDrop}
+    on:dragend={handleDragEnd}
+  >
+    <!-- Toggler has been moved out -->
     <span class="name">{node.name}</span>
 
     {#if isActive}
@@ -77,6 +182,11 @@
     {/if}
   </div>
 
+  <div
+    class="drop-indicator-after"
+    class:visible={dropIndicator === "after"}
+  ></div>
+
   {#if node.children.length > 0 && isOpen}
     <div class="children">
       {#each node.children as child}
@@ -88,7 +198,7 @@
 
 <style>
   .node {
-    padding-left: 20px;
+    padding-left: 10px;
     position: relative;
   }
 
@@ -96,12 +206,62 @@
     display: flex;
     align-items: center;
     padding: 5px 8px;
+    margin-left: 10px;
     border-radius: 4px;
-    cursor: pointer;
+    cursor: grab;
+    position: relative;
+  }
+
+  .is-dragging-node > .row {
+    opacity: 0.5;
+  }
+
+  .row[draggable="true"]:active {
+    cursor: grabbing;
+  }
+
+  .row::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 4px;
+    border: 2px dashed #39c5cf;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    pointer-events: none;
   }
 
   .row:hover {
     background-color: #21262d;
+  }
+
+  .row.drop-on::after {
+    opacity: 1;
+  }
+
+  .drop-indicator-before,
+  .drop-indicator-after {
+    position: absolute;
+    left: 30px;
+    right: 0;
+    height: 2px;
+    background-color: #fdc349;
+    z-index: 1;
+    display: none;
+    pointer-events: none;
+  }
+  .drop-indicator-before {
+    top: -1px;
+  }
+  .drop-indicator-after {
+    bottom: -1px;
+  }
+  .drop-indicator-before.visible,
+  .drop-indicator-after.visible {
+    display: block;
   }
 
   .active > .row {
@@ -119,6 +279,8 @@
     align-items: center;
     justify-content: center;
     border-radius: 4px;
+    cursor: pointer;
+    z-index: 2;
   }
   .toggler:hover {
     background-color: #30363d;
@@ -129,9 +291,11 @@
     color: #8b949e;
     font-size: 14px;
   }
-  .active > .row .icon {
+  /* NEW: Simplified rule for icon color within an active node's toggler */
+  .active > .toggler .icon {
     color: #8b949e;
   }
+
   .icon.dot {
     font-size: 18px;
     line-height: 1;
@@ -146,7 +310,7 @@
 
   .children {
     border-left: 1px solid #30363d;
-    margin-left: 9px;
+    margin-left: 29px;
   }
 
   .actions {
