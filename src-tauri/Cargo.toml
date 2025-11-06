@@ -1,6 +1,6 @@
 [package]
 name = "the-janus-foundry"
-version = "1.0.6"
+version = "1.0.7"
 description = "A Tauri App"
 authors = ["Janus"]
 edition = "2021"
