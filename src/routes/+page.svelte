@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { get } from "svelte/store";
-  import { base } from '$app/paths';
+  import { base } from "$app/paths";
   import {
     tree,
     selectedNode,
@@ -32,6 +32,38 @@
   let editText = "";
 
   let orreryIsMinimized = true;
+
+  let sidebarWidth = 30; // Initial width in percent
+  let isResizing = false;
+
+  function startResize(event: MouseEvent) {
+    document.body.classList.add("resizing");
+    isResizing = true;
+    window.addEventListener("mousemove", doResize);
+    window.addEventListener("mouseup", stopResize);
+  }
+
+  function doResize(event: MouseEvent) {
+    if (isResizing) {
+      const newWidth = (event.clientX / window.innerWidth) * 100;
+      if (newWidth > 15 && newWidth < 70) {
+        // Min/max width constraints
+        sidebarWidth = newWidth;
+      }
+    }
+  }
+
+  function stopResize() {
+    document.body.classList.remove("resizing");
+    isResizing = false;
+    window.removeEventListener("mousemove", doResize);
+    window.removeEventListener("mouseup", stopResize);
+  }
+
+  onDestroy(() => {
+    window.removeEventListener("mousemove", doResize);
+    window.removeEventListener("mouseup", stopResize);
+  });
 
   selectedNode.subscribe((node) => {
     if (node) {
@@ -165,7 +197,13 @@
   <ConfirmModal />
 {/if}
 
-<main class:orrery-minimized={orreryIsMinimized}>
+<main
+  class:orrery-minimized={orreryIsMinimized}
+  class:resizing={isResizing}
+  style="grid-template-columns: {sidebarWidth}% 5px 1fr {orreryIsMinimized
+    ? '0px'
+    : '30%'};"
+>
   <div class="sidebar">
     <div class="sidebar-content">
       <div class="tree-container">
@@ -203,6 +241,8 @@
       </button>
     </div>
   </div>
+
+  <div class="divider" on:mousedown={startResize} title="Drag to resize"></div>
 
   <div class="workbench">
     <div class="workbench-header">
@@ -275,16 +315,23 @@
     font-family: sans-serif;
     margin: 0;
   }
+  :global(body.resizing) {
+    cursor: col-resize !important;
+    user-select: none;
+    -webkit-user-select: none; /* For Safari */
+    -moz-user-select: none; /* For Firefox */
+    -ms-user-select: none; /* For Internet Explorer/Edge */
+  }
   main {
     display: grid;
-    grid-template-columns: 30% 40% 30%;
     height: 100vh;
     overflow-x: hidden;
     transition: grid-template-columns 0.3s ease-in-out;
   }
-
+  main.resizing {
+    transition: none; /* This disables animation during drag */
+  }
   main.orrery-minimized {
-    grid-template-columns: 30% 70% 0fr;
     overflow-x: hidden;
   }
 
@@ -461,6 +508,7 @@
     border: 1px solid #30363d;
     border-radius: 4px;
     cursor: pointer;
+    max-height: 96px;
   }
   .core-interactions button:hover:not(:disabled) {
     border-color: #39c5cf;
@@ -499,5 +547,14 @@
     font-family: monospace;
     font-size: 1.2em;
     margin-left: 8px;
+  }
+  .divider {
+    width: 5px;
+    background-color: #30363d;
+    cursor: col-resize;
+    transition: background-color 0.2s ease-in-out;
+  }
+  .divider:hover {
+    background-color: #fdc349;
   }
 </style>

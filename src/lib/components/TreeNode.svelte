@@ -159,7 +159,6 @@
     class:visible={dropIndicator === "before"}
   ></div>
 
-  <!-- FIX: Toggler is now a sibling of the row, not a child -->
   <div class="toggler" on:click={handleToggle}>
     {#if node.children.length > 0}
       <span class="icon">{isOpen ? "−" : "+"}</span>
@@ -330,7 +329,7 @@
 
   .children {
     border-left: 1px solid #30363d;
-    margin-left: 29px;
+    margin-left: 10px;
   }
 
   .actions {

@@ -2,6 +2,7 @@
     import { flatNodeMap, crossref, selectedNode } from "$lib/store";
     import { notify } from "$lib/notifications";
     import { get } from "svelte/store";
+    import { slide } from "svelte/transition";
     import { isTauri } from "$lib/utils";
 
     let isMinimized = true;
@@ -126,7 +127,7 @@
         </button>
     </div>
     {#if !isMinimized}
-        <div class="panel-content">
+        <div class="panel-content" transition:slide={{ duration: 300 }}>
             <div class="stats-grid">
                 <div class="stat-label">Concepts</div>
                 <div class="stat-value">{totalNodes}</div>
