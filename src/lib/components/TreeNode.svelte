@@ -343,7 +343,6 @@
     background: #161b22;
     color: #e6edf3;
     border: 1px solid #30363d;
-    border-radius: 50%;
     width: 22px;
     height: 22px;
     display: flex;

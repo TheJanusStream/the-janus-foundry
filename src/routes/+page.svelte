@@ -46,7 +46,7 @@
   function doResize(event: MouseEvent) {
     if (isResizing) {
       const newWidth = (event.clientX / window.innerWidth) * 100;
-      if (newWidth > 15 && newWidth < 70) {
+      if (newWidth > 5 && newWidth < 70) {
         // Min/max width constraints
         sidebarWidth = newWidth;
       }
