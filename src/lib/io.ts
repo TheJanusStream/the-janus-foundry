@@ -584,8 +584,10 @@ export async function applyPatchFromClipboard(): Promise<void> {
                 for (const op of patchData) {
                     switch (op.op) {
                         case 'add':
-                            const siblingCount = await db.nodes.where({ parentId: op.parent_uuid }).count();
-                            await recursiveAddNode(op.node, op.parent_uuid, siblingCount);
+                            const addSiblings = await db.nodes.where({ parentId: op.parent_uuid }).toArray();
+                            const maxSortOrderAdd = addSiblings.reduce((max, node) => node.sortOrder > max ? node.sortOrder : max, -1);
+                            const newSortOrderAdd = maxSortOrderAdd + 1;
+                            await recursiveAddNode(op.node, op.parent_uuid, newSortOrderAdd);
                             break;
                         case 'remove':
                             await deleteNodeAndChildren(op.uuid);
@@ -667,9 +669,9 @@ export async function copyNodeToClipboard(nodeId: string): Promise<void> {
         const subtreeNodes = new Map<string, Node>();
         const queue: string[] = [nodeId];
         const visited = new Set<string>([nodeId]);
-        
+
         let head = 0;
-        while(head < queue.length) {
+        while (head < queue.length) {
             const currentId = queue[head++];
             const node = await db.nodes.get(currentId);
             if (node) {
@@ -687,7 +689,7 @@ export async function copyNodeToClipboard(nodeId: string): Promise<void> {
         if (subtreeNodes.size === 0) {
             throw new Error("Node not found in database.");
         }
-        
+
         const sourceTree = buildSourceTree(nodeId, subtreeNodes);
         const jsonString = JSON.stringify(sourceTree, null, 2);
 
@@ -697,7 +699,7 @@ export async function copyNodeToClipboard(nodeId: string): Promise<void> {
         } else {
             await navigator.clipboard.writeText(jsonString);
         }
-        
+
         notify(`Copied "${sourceTree.Name}" and its ${subtreeNodes.size - 1} children to clipboard.`, 'success');
 
     } catch (error) {
@@ -732,9 +734,10 @@ export async function pasteNodeFromClipboard(parentId: string): Promise<void> {
         }
 
         await db.transaction('rw', db.nodes, async () => {
-            const siblingCount = await db.nodes.where({ parentId: parentId }).count();
-            // We can reuse the recursiveAddNode function from the patch logic!
-            await recursiveAddNode(nodeData, parentId, siblingCount);
+            const pasteSiblings = await db.nodes.where({ parentId: parentId }).toArray();
+            const maxSortOrderPaste = pasteSiblings.reduce((max, node) => node.sortOrder > max ? node.sortOrder : max, -1);
+            const newSortOrderPaste = maxSortOrderPaste + 1;
+            await recursiveAddNode(nodeData, parentId, newSortOrderPaste);
         });
 
         notify(`Pasted "${nodeData.Name}" as a new child node.`, "success");

@@ -49,7 +49,10 @@ export async function updateNode(nodeId: string, changes: Partial<Omit<Node, 'id
  */
 export async function createNode(parentId: string | null): Promise<string> {
   try {
-    const siblingCount = await db.nodes.where({ parentId: parentId }).count();
+    const siblings = await db.nodes.where({ parentId: parentId }).toArray();
+    const maxSortOrder = siblings.reduce((max, node) => node.sortOrder > max ? node.sortOrder : max, -1);
+    const newSortOrder = maxSortOrder + 1;
+
     const newId = crypto.randomUUID();
 
     const newNode: Node = {
@@ -58,11 +61,11 @@ export async function createNode(parentId: string | null): Promise<string> {
       name: 'New Node',
       type: 'Node',
       description: '',
-      sortOrder: siblingCount, // Place it last among its siblings
+      sortOrder: newSortOrder,
     };
 
     await db.nodes.add(newNode);
-    console.log(`Node ${newId} created under parent ${parentId}.`);
+    console.log(`Node ${newId} created under parent ${parentId} with sortOrder ${newSortOrder}.`);
     return newId;
   } catch (error) {
     console.error(`Failed to create node:`, error);
