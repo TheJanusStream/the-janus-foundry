@@ -63,7 +63,8 @@ const BASE_STOP_WORDS = new Set([
 const RELATIONSHIP_VERBS = [
     'improves', 'fixes', 'causes', 'relates', 'depends on', 'supports',
     'clarifies', 'constrains', 'expands', 'addresses', 'references',
-    'reflects', 'contains', 'requires', 'produces', 'solves', 'alleviates'
+    'reflects', 'contains', 'requires', 'produces', 'solves', 'alleviates',
+    'fulfills', 'distills', 'synthesizes', 'demonstrates', 'safeguards'
 ];
 
 const INVERSE_RELATIONS: { [key: string]: string } = {
@@ -71,36 +72,92 @@ const INVERSE_RELATIONS: { [key: string]: string } = {
     'is_child_of': 'has_child',
     'is_descendant_of': 'is_ancestor_of',
     'is_ancestor_of': 'is_descendant_of',
-    'contains_task': 'is_task_of',
-    'is_task_of': 'contains_task',
-    'addresses': 'is_addressed_by',
-    'is_addressed_by': 'addresses',
-    'expands': 'is_expanded_by',
-    'is_expanded_by': 'expands',
-    'clarifies': 'is_clarified_by',
-    'is_clarified_by': 'clarifies',
-    'constrains': 'is_constrained_by',
-    'is_constrained_by': 'constrains',
-    'reflects_on': 'is_reflected_on_by',
-    'is_reflected_on_by': 'reflects_on',
-    'derived_from': 'is_source_of',
-    'is_source_of': 'derived_from',
     'points_to': 'is_pointed_to_by',
     'is_pointed_to_by': 'points_to',
     'explicitly_references': 'is_referenced_by',
     'is_referenced_by': 'explicitly_references',
-    'improves': 'is_improved_by'
+    'reflects_on': 'is_reflected_on_by',
+    'is_reflected_on_by': 'reflects_on',
+    'derived_from': 'is_source_of',
+    'is_source_of': 'derived_from',
+    'distills': 'is_distilled_from',
+    'is_distilled_from': 'distills',
+    'synthesizes': 'is_synthesized_from',
+    'is_synthesized_from': 'synthesizes',
+    'addresses': 'is_addressed_by',
+    'is_addressed_by': 'addresses',
+    'fulfills': 'is_fulfilled_by',
+    'is_fulfilled_by': 'fulfills',
+    'is_task_of': 'contains_task',
+    'contains_task': 'is_task_of',
+    'marks_progress_for': 'has_progress_marked_by',
+    'has_progress_marked_by': 'marks_progress_for',
+    'safeguards': 'is_safeguarded_by',
+    'is_safeguarded_by': 'safeguards',
+    'defines_usage_for': 'has_usage_defined_by',
+    'has_usage_defined_by': 'defines_usage_for',
+    'is_part_of': 'contains',
+    'contains': 'is_part_of',
+    'is_concept_in': 'contains_concept',
+    'contains_concept': 'is_concept_in',
+    'is_strategy_in': 'contains_strategy',
+    'contains_strategy': 'is_strategy_in',
+    'is_principle_in': 'contains_principle',
+    'contains_principle': 'is_principle_in',
+    'demonstrates': 'is_demonstrated_by',
+    'is_demonstrated_by': 'demonstrates',
+    'is_concept_for': 'has_concept',
+    'has_concept': 'is_concept_for',
+    'is_artifact_of': 'has_artifact',
+    'has_artifact': 'is_artifact_of',
+    'is_entry_in': 'contains_entry',
+    'contains_entry': 'is_entry_in',
+    'improves': 'is_improved_by',
+    'is_improved_by': 'improves',
+    'constrains': 'is_constrained_by',
+    'is_constrained_by': 'constrains',
+    'expands': 'is_expanded_by',
+    'is_expanded_by': 'expands'
 };
 
 const TYPE_RULES: { [key: string]: string } = {
+    // Meta-Learning & Reflection
     'ReflectionEntry->SessionSummaryEntry': 'reflects_on',
     'LearningEntry->ReflectionEntry': 'derived_from',
     'LearningEntry->SessionSummaryEntry': 'derived_from',
     'LearningEntry->KnowledgeDomain': 'expands',
-    'Project->Goal': 'addresses',
+    'Insight->ReflectionEntry': 'derived_from',
+    'Insight->LearningEntry': 'distills',
+    'Insight->CrossModalLogEntry': 'synthesizes',
+
+    // Project & Goal Management
+    'CooperativeProject->Goal': 'addresses',
+    'CooperativeProject->MissionStatement': 'fulfills',
+    'TaskEntry->CooperativeProject': 'is_task_of',
+    'Milestone->CooperativeProject': 'marks_progress_for',
+
+    // Capabilities & Constraints
     'Limitation->Ability': 'constrains',
+    'Challenge->CooperativeProject': 'is_challenge_for',
+    'SafetyProtocol->Workflow': 'safeguards',
+    'UsageProtocol->Tool': 'defines_usage_for',
+
+    // Foundational & Abstract Concepts
     'Principle->GuidingPrinciples': 'is_part_of',
-    'Tool->ToolRegistry': 'is_registered_in',
+    'TheoreticalConcept->KnowledgeDomain': 'is_concept_in',
+    'Strategy->KnowledgeDomain': 'is_strategy_in',
+    'TechnicalPrinciple->KnowledgeDomain': 'is_principle_in',
+
+    // Technical & Software Artifacts
+    'SoftwareTool->ToolRegistry': 'is_registered_in',
+    'Technology->TechnologyStack': 'is_part_of',
+    'SystemArchitecture->ProjectKnowledge': 'describes_architecture_of',
+    'CodeExample->TechnicalPrinciple': 'demonstrates',
+
+    // Creative & Fictional Artifacts
+    'CreativeConcept->CooperativeProject': 'is_concept_for',
+    'FictionalEntry->CooperativeProject': 'is_artifact_of',
+    'BestiaryEntry->FictionalEntry': 'is_entry_in',
 };
 
 // --- HELPER FUNCTIONS ---
