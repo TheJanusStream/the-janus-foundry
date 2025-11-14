@@ -4,6 +4,9 @@
   import { tree, selectedNode, crossref, flatNodeMap } from "$lib/store";
   import type { TreeNode } from "$lib/store";
   import type { CrossRefLink } from "$lib/io";
+  import OrreryLegend from "./OrreryLegend.svelte";
+  import { NODE_COLORS, RELATIONSHIP_COLORS } from "$lib/colors";
+
 
   let container: HTMLDivElement;
   let Graph: any = null;
@@ -41,8 +44,50 @@
         .nodeVal(4)
         .linkDirectionalParticles(1)
         .linkDirectionalParticleWidth(1.2)
-        .linkColor(() => "rgba(100, 100, 100, 0.5)")
-        .linkWidth(0.5)
+        .linkColor((link) => {
+          // Resolve source and target IDs, whether they are objects or strings
+          const sourceId = (link.source as any).id || link.source;
+          const targetId = (link.target as any).id || link.target;
+
+          // Find the specific link in our cross-reference index
+          const sourceLinks = $crossref[sourceId] || [];
+          const specificLink = sourceLinks.find(
+            (l) => l.target_id === targetId,
+          );
+
+          // Return the color from our map, or the default if not found
+          if (specificLink && RELATIONSHIP_COLORS[specificLink.relation]) {
+            return RELATIONSHIP_COLORS[specificLink.relation];
+          }
+          return RELATIONSHIP_COLORS["is_related_to"]; // Fallback color
+        })
+        .linkWidth((link) => {
+          const sourceId = (link.source as any).id || link.source;
+          const targetId = (link.target as any).id || link.target;
+          const sourceLinks = $crossref[sourceId] || [];
+          const specificLink = sourceLinks.find(
+            (l) => l.target_id === targetId,
+          );
+          if (specificLink) {
+            // Use a base width plus a factor of the confidence
+            // This ensures even low-confidence links are visible
+            return 0.2 + specificLink.confidence * 1.5;
+          }
+          return 0.2; // Default thin line for any fallback cases
+        })
+        .linkLineDash((link) => {
+          const sourceId = (link.source as any).id || link.source;
+          const targetId = (link.target as any).id || link.target;
+          const sourceLinks = $crossref[sourceId] || [];
+          const specificLink = sourceLinks.find(
+            (l) => l.target_id === targetId,
+          );
+          // If confidence is below 0.3, return a dash pattern, otherwise solid
+          if (specificLink && specificLink.confidence < 0.3) {
+            return [2, 4]; // A pattern of 2px dash, 4px gap
+          }
+          return null; // Solid line
+        })
         .onNodeClick((node) => {
           const fullNode = findNodeInTree($tree, node.id as string);
           if (fullNode) {
@@ -121,12 +166,13 @@
           : "";
       });
       Graph.nodeColor((node: { id: string; type: string }) => {
-        if ($selectedNode && node.id === $selectedNode.id) return "#e5534b";
-        if (node.type.includes("Project")) return "#fdc349";
-        if (node.type.includes("Concept")) return "#39c5cf";
+        if ($selectedNode && node.id === $selectedNode.id)
+          return NODE_COLORS["Selected"];
+        if (node.type.includes("Project")) return NODE_COLORS["Project"];
+        if (node.type.includes("Concept")) return NODE_COLORS["Concept"];
         if (node.type.includes("Learning") || node.type.includes("Reflection"))
-          return "#8cc37a";
-        return "#e6edf3";
+          return NODE_COLORS["Learning/Reflection"];
+        return NODE_COLORS["Default"];
       });
 
       if (initialLoad) {
@@ -203,6 +249,7 @@
 </script>
 
 <div class="orrery-layout">
+  <OrreryLegend />
   {#if $selectedNode}
     <div class="related-nodes-panel">
       <!-- REMOVED: <h4>Related Concepts (Direct)</h4> -->
