@@ -21,9 +21,9 @@ export const RELATIONSHIP_COLORS: { [key: string]: string } = {
     'derived_from': '#3fb950',
     'is_source_of': '#3fb950',
     'distills': '#a371f7',
-    'is_distilled_from': '#a371f7',
+    'is_distilled_by': '#a371f7',
     'synthesizes': '#b392f0',
-    'is_synthesized_from': '#b392f0',
+    'is_synthesized_by': '#b392f0',
     'produces': '#a371f7',
     // Project & Goal
     'addresses': '#58a6ff',
