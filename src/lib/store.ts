@@ -2,7 +2,7 @@
 
 import { derived, writable } from 'svelte/store';
 import { db, type Node } from './db';
-import {generateCrossReferences} from './io';
+import { generateCrossReferences } from './io';
 import type { CrossRefIndex } from './io';
 
 // Define a richer type for in-memory representation
@@ -12,40 +12,41 @@ export type TreeNode = Node & { children: TreeNode[] };
 export const tree = writable<TreeNode[]>([]);
 export const selectedNode = writable<TreeNode | null>(null);
 export const crossref = writable<CrossRefIndex>({});
+export const isSearchOpen = writable(false);
 
 
 // --- NEW ---
 // A derived store that holds a map of all nodes by their ID for fast lookups
 export const flatNodeMap = derived(tree, ($tree) => {
-    const map = new Map<string, TreeNode>();
-    function recurse(nodes: TreeNode[]) {
-        for (const node of nodes) {
-            map.set(node.id, node);
-            recurse(node.children);
-        }
+  const map = new Map<string, TreeNode>();
+  function recurse(nodes: TreeNode[]) {
+    for (const node of nodes) {
+      map.set(node.id, node);
+      recurse(node.children);
     }
-    recurse($tree);
-    return map;
+  }
+  recurse($tree);
+  return map;
 });
 
 // --- NEW ---
 // A derived store that automatically calculates the set of ancestor IDs for the selected node
 export const ancestorIds = derived(
-    [selectedNode, flatNodeMap],
-    ([$selectedNode, $flatNodeMap]) => {
-        const ids = new Set<string>();
-        if (!$selectedNode || !$flatNodeMap.size) {
-            return ids;
-        }
-
-        let currentId = $selectedNode.parentId;
-        while (currentId) {
-            ids.add(currentId);
-            const parentNode = $flatNodeMap.get(currentId);
-            currentId = parentNode ? parentNode.parentId : null;
-        }
-        return ids;
+  [selectedNode, flatNodeMap],
+  ([$selectedNode, $flatNodeMap]) => {
+    const ids = new Set<string>();
+    if (!$selectedNode || !$flatNodeMap.size) {
+      return ids;
     }
+
+    let currentId = $selectedNode.parentId;
+    while (currentId) {
+      ids.add(currentId);
+      const parentNode = $flatNodeMap.get(currentId);
+      currentId = parentNode ? parentNode.parentId : null;
+    }
+    return ids;
+  }
 );
 
 /**
@@ -54,7 +55,7 @@ export const ancestorIds = derived(
  */
 export async function loadTree() {
   const flatNodes = await db.nodes.orderBy('sortOrder').toArray();
-  
+
   if (flatNodes.length === 0) {
     tree.set([]);
     return;
@@ -89,6 +90,6 @@ export async function loadTree() {
 + */
 
 export async function loadCrossref() {
-    const index = await generateCrossReferences();
-    crossref.set(index);
+  const index = await generateCrossReferences();
+  crossref.set(index);
 }

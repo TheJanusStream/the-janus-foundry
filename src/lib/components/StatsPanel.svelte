@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { flatNodeMap, crossref, selectedNode } from "$lib/store";
+    import {
+        flatNodeMap,
+        crossref,
+        selectedNode,
+        isSearchOpen,
+    } from "$lib/store";
     import { notify } from "$lib/notifications";
     import { get } from "svelte/store";
     import { slide } from "svelte/transition";
@@ -106,6 +111,10 @@
 
         return { knowledgeClusters, orphanNodes };
     })();
+
+    function toggleSearch() {
+        isSearchOpen.set(true);
+    }
 </script>
 
 <div class="stats-panel">
@@ -118,13 +127,22 @@
             <span>VITAL SIGNS</span>
             <span class="toggle-icon">{isMinimized ? "[+]" : "−"}</span>
         </button>
-        <button
-            class="jump-button"
-            on:click={handleJumpToNode}
-            title="Jump to UUID from clipboard"
-        >
-            ➔
-        </button>
+        <div class="header-actions">
+            <button
+                class="action-button"
+                on:click={toggleSearch}
+                title="Search Nodes"
+            >
+                🔍
+            </button>
+            <button
+                class="action-button"
+                on:click={handleJumpToNode}
+                title="Jump to UUID from clipboard"
+            >
+                ➔
+            </button>
+        </div>
     </div>
     {#if !isMinimized}
         <div class="panel-content" transition:slide={{ duration: 300 }}>
@@ -188,19 +206,23 @@
     .title:hover {
         opacity: 1;
     }
+    .header-actions {
+        display: flex;
+        gap: 5px;
+    }
 
     .toggle-icon {
         font-family: monospace;
         font-size: 1.2em;
     }
-    .jump-button {
+    .action-button {
         background-color: transparent;
         border: 1px solid #30363d;
         color: #39c5cf;
         border-radius: 4px;
         width: 30px;
         height: 24px;
-        font-size: 1.2em;
+        font-size: 1.1em; /* Slight adjust */
         line-height: 1;
         display: flex;
         align-items: center;
@@ -208,7 +230,7 @@
         cursor: pointer;
         transition: all 0.2s ease-in-out;
     }
-    .jump-button:hover {
+    .action-button:hover {
         border-color: #39c5cf;
         background-color: #21262d;
         color: #e6edf3;

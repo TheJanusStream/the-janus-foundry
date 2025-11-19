@@ -25,6 +25,8 @@
   import ConfirmModal from "$lib/components/ConfirmModal.svelte";
   import { notify } from "$lib/notifications";
   import { modalStore } from "$lib/modal";
+  import { isSearchOpen } from "$lib/store";
+  import SearchModal from "$lib/components/SearchModal.svelte";
 
   let editMode = false;
   let editName = "";
@@ -189,10 +191,26 @@
       window.open(patreonUrl, "_blank");
     }
   }
+
+  function handleGlobalKeydown(event: KeyboardEvent) {
+    // Cmd+K or Ctrl+K
+    if ((event.metaKey || event.ctrlKey) && event.key === "k") {
+      event.preventDefault();
+      isSearchOpen.update((v) => !v);
+    }
+  }
 </script>
 
+<svelte:window on:keydown={handleGlobalKeydown} />
 <NotificationDisplay />
 
+{#if $modalStore.isOpen}
+  <ConfirmModal />
+{/if}
+
+{#if $isSearchOpen}
+  <SearchModal />
+{/if}
 {#if $modalStore.isOpen}
   <ConfirmModal />
 {/if}
