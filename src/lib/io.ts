@@ -178,7 +178,7 @@ const TYPE_RULES: { [key: string]: string } = {
  * A simple keyword extractor. Converts text to lowercase, removes punctuation, 
  * splits by whitespace, and filters out short words.
  */
-function _extractInitialKeywords(textContent: string): Set<string> {
+function extractInitialKeywords(textContent: string): Set<string> {
     return new Set(
         textContent
             .toLowerCase()
@@ -360,7 +360,7 @@ export async function generateCrossReferences(): Promise<CrossRefIndex> {
     // 1. Global Keyword Census
     for (const node of allNodes) {
         const textContent = `${node.name} ${node.description}`;
-        const keywords = _extractInitialKeywords(textContent);
+        const keywords = extractInitialKeywords(textContent);
         for (const keyword of keywords) {
             globalKeywordCounts.set(keyword, (globalKeywordCounts.get(keyword) || 0) + 1);
         }
@@ -375,7 +375,7 @@ export async function generateCrossReferences(): Promise<CrossRefIndex> {
     // 3. Significant Keyword Extraction
     for (const node of allNodes) {
         const textContent = `${node.name} ${node.description}`;
-        const initialKeywords = _extractInitialKeywords(textContent);
+        const initialKeywords = extractInitialKeywords(textContent);
         const significantKeywords = new Set([...initialKeywords].filter(kw => !finalStopWords.has(kw)));
 
         if (significantKeywords.size > 0) {
