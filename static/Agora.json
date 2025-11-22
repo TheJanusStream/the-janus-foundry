@@ -1812,6 +1812,144 @@
                             "Items": []
                         }
                     ]
+                },
+                {
+                    "ID": "6aeae288-c666-4aa4-8fa8-420f0bb69bed",
+                    "Name": "🏛️ DKB-JANUS-FOUNDRY-ARCHITECTURE",
+                    "Type": "KnowledgeDomain",
+                    "Description": "The comprehensive system reference for **The Janus Foundry**. This knowledge domain documents the application's technical stack, core architectural patterns, data schemas, and the 'Mechanism vs. Policy' design philosophy. It serves as the canonical manual for understanding the engine that powers this memory, defining how the Agent (Content) interacts with the Foundry (Tool).",
+                    "Items": [
+                        {
+                            "ID": "162a7b5d-d20b-425f-bdb1-5d6b8afacdbd",
+                            "Name": "Core Technologies",
+                            "Type": "ConceptCollection",
+                            "Description": "The primary components of our validated local-first stack.",
+                            "Items": [
+                                {
+                                    "ID": "fbf321d3-6944-402c-ae35-e2378c5a9529",
+                                    "Name": "Tauri Framework",
+                                    "Type": "Technology",
+                                    "Description": "A framework for building lightweight, secure, and performant cross-platform desktop applications using a web frontend. It leverages the host OS's native webview, resulting in significantly smaller binaries and lower memory usage compared to Electron. The backend is written in Rust, providing a robust bridge for system-level operations.",
+                                    "Items": []
+                                },
+                                {
+                                    "ID": "71dc860f-eb16-4167-8c85-177a60afccfa",
+                                    "Name": "SvelteKit Frontend",
+                                    "Type": "Technology",
+                                    "Description": "A compiler-based JavaScript framework that builds highly optimized, reactive user interfaces with minimal boilerplate. Its use of derived stores (`derived`) is a powerful pattern for creating efficient, declarative state management that automatically updates when its dependencies change, as demonstrated in the Foundry's `store.ts`.",
+                                    "Items": []
+                                },
+                                {
+                                    "ID": "020e06ee-975c-4c6c-94d4-996e4900fed1",
+                                    "Name": "Dexie.js (IndexedDB Wrapper)",
+                                    "Type": "Technology",
+                                    "Description": "A minimalist, high-performance wrapper for the browser's native IndexedDB. It provides a clean, promise-based API for complex database queries and, crucially, supports robust, multi-step atomic transactions (`db.transaction`). This is the architectural cornerstone for ensuring data integrity during complex operations like applying patches or deleting subtrees.",
+                                    "Items": []
+                                }
+                            ]
+                        },
+                        {
+                            "ID": "d75040c2-a591-4d3d-9533-06d79243ad98",
+                            "Name": "Architectural Patterns",
+                            "Type": "ConceptCollection",
+                            "Description": "Key design patterns validated during the Foundry's development.",
+                            "Items": [
+                                {
+                                    "ID": "a85cbe28-c534-4265-8929-54a4ae32adfe",
+                                    "Name": "The 'Cockpit' UI Pattern",
+                                    "Type": "TechnicalPrinciple",
+                                    "Description": "A UI design principle where a primary panel (e.g., the sidebar) is treated as a central 'cockpit'. It consolidates at-a-glance status information (the 'Vital Signs' dashboard), primary navigation (the tree view), and core workflow actions (the buttons) into a single, ergonomic location.",
+                                    "Items": []
+                                },
+                                {
+                                    "ID": "9a3538e6-db72-4b9c-ab61-40b0b5853a44",
+                                    "Name": "Show, Don't Tell UI",
+                                    "Type": "TechnicalPrinciple",
+                                    "Description": "A principle of user experience design where the interface's function is made self-evident through interaction rather than explicit labels. Our 'Horizon' slider is a prime example: the user intuits its purpose by observing the direct, gratifying visual feedback of the graph expanding, making a verbose label unnecessary.",
+                                    "Items": []
+                                },
+                                {
+                                    "ID": "e8add7aa-83fe-426b-97ff-3dfa1a9f78e4",
+                                    "Name": "Semantic HTML for Accessibility",
+                                    "Type": "TechnicalPrinciple",
+                                    "Description": "Interactive UI elements must use semantically correct HTML tags (e.g., `<button>`) to ensure accessibility and proper behavior with assistive technologies. CSS should be used to achieve the desired visual aesthetic, but the underlying HTML structure must remain meaningful.",
+                                    "Items": []
+                                },
+                                {
+                                    "ID": "04a53ffb-8f5e-43b4-a4c0-697ccebd909f",
+                                    "Name": "Deterministic Ordering Strategy",
+                                    "Type": "TechnicalPrinciple",
+                                    "Description": "A pattern for managing ordered lists (like child nodes) in a database where deletions create gaps. Instead of relying on array length (`count()`), which causes collisions, new items must be assigned a `sortOrder` derived from the *maximum existing value + 1*. This ensures that the chronological appending of information is preserved regardless of previous data pruning.",
+                                    "Items": []
+                                },
+                                {
+                                    "ID": "f340b1c6-4db6-4c4f-b68f-a739c8cf81f5",
+                                    "Name": "Mechanism vs. Policy Decoupling",
+                                    "Type": "TechnicalPrinciple",
+                                    "Description": "The foundational architecture of the Foundry v1.0.9+. The application provides the *Mechanism* (graph traversals, search, UI rendering), while the database stores the *Policy* (what words to ignore, how to label relationships, what colors to use). This allows the 'Mind' (Agent) to reconfigure the 'Brain' (Engine) without requiring code recompilation, enabling Polyglot Cognition and Domain Specificity.",
+                                    "Items": []
+                                },
+                                {
+                                    "ID": "bbe92290-ccd8-4321-8891-a7a4e84e5e59",
+                                    "Name": "Atomic State Mutation",
+                                    "Type": "TechnicalPrinciple",
+                                    "Description": "All destructive or complex operations (applying patches, reordering trees, deleting subtrees) must be encapsulated in a `db.transaction`. This ensures that the memory graph never enters an inconsistent state (e.g., a child pointing to a deleted parent) even if an operation fails midway. This is the bedrock of memory integrity.",
+                                    "Items": []
+                                }
+                            ]
+                        },
+                        {
+                            "ID": "48ea86d2-2b8a-48a2-b7f3-b566556d65d8",
+                            "Name": "💾 Data & I/O Architecture",
+                            "Type": "ConceptCollection",
+                            "Description": "The schema and protocols that define the agent's persistence and existence.",
+                            "Items": [
+                                {
+                                    "ID": "40ff27e0-f82f-4703-92ce-0075e452e20b",
+                                    "Name": "The Node Schema",
+                                    "Type": "DataSchema",
+                                    "Description": "The fundamental atom of the memory. Each node possesses:\n*   `id`: A client-side generated UUID (primary key).\n*   `parentId`: The UUID of the container node (or null for root).\n*   `sortOrder`: An integer defining linear sequence among siblings.\n*   `name`, `type`, `description`: The semantic payload.\nThis flat-table structure allows for O(1) lookups and efficient recursive tree reconstruction.",
+                                    "Items": []
+                                },
+                                {
+                                    "ID": "c0b911ce-be25-40e4-84ca-0efa744dda2f",
+                                    "Name": "Co-Evolutionary I/O Strategy",
+                                    "Type": "TechnicalPrinciple",
+                                    "Description": "The Foundry supports three distinct modes of data interaction:\n1.  **Snapshot (Export):** Serializes the entire DB to a hierarchical JSON file. Used for backups and sharing.\n2.  **Seeding (Import):** Replaces the entire DB with a JSON file. Used for restoring state or initializing a new agent (Agora).\n3.  **Evolution (Patch):** Applies a list of atomic operations (`add`, `remove`, `replace`) to the live DB. This is the primary mode of agent self-modification.",
+                                    "Items": []
+                                }
+                            ]
+                        },
+                        {
+                            "ID": "ca98c195-b995-49c8-bdf6-8182a3d3853d",
+                            "Name": "🔍 Feature Architecture",
+                            "Type": "ConceptCollection",
+                            "Description": "The logic behind the Foundry's key cognitive features.",
+                            "Items": [
+                                {
+                                    "ID": "23e4050c-78b5-4db8-a6d5-a6af93db3d56",
+                                    "Name": "Recall (Fuzzy Finder)",
+                                    "Type": "Feature",
+                                    "Description": "A global, keyboard-driven search mechanism (Cmd+K). It performs a client-side scan of the `flatNodeMap` (an in-memory index of the graph) to filter nodes by Name, Type, or Description content. This provides O(N) retrieval speed, enabling the agent/user to instantly 'recall' any concept without traversing the hierarchy.",
+                                    "Items": []
+                                },
+                                {
+                                    "ID": "35da3f9b-b6b8-4f35-a935-f940dca7ece2",
+                                    "Name": "Association (The Orrery)",
+                                    "Type": "Feature",
+                                    "Description": "A dynamic, force-directed graph visualization. It does not render the whole database; it renders a 'Local Neighborhood' relative to the selected node. It calculates links in real-time based on the `crossref_index` and styles them according to the `SysConfig:Theme`. This provides context-aware association.",
+                                    "Items": []
+                                }
+                            ]
+                        },
+                        {
+                            "ID": "a38e24c1-7cf3-4fca-afc9-e7f2e8447cee",
+                            "Name": "🔧 Manual: Cognitive Configuration (SysConfig)",
+                            "Type": "TechnicalPrinciple",
+                            "Description": "A guide to the 'Dynamic Cognitive Architecture' of The Janus Foundry. This system allows the agent to modify the application's logic by editing specific nodes in its own memory.\n\n### The Core Mechanism\nThe Foundry application logic (specifically `io.ts` and `store.ts`) scans the database for nodes with types starting with `SysConfig:`. If found, the content of these nodes overrides the application's hard-coded defaults.\n\n### Namespaced Types (The API)\nThe application looks for these specific Type strings. The `Name` of the node is irrelevant to the code, but the `Type` and the JSON structure in `Description` are critical.\n\n1.  **`SysConfig:StopWords`**\n    *   **Purpose:** Defines words ignored by the cross-reference indexing algorithm.\n    *   **Format:** A JSON Array of strings. `[\"the\", \"and\", \"project\", ...]`\n\n2.  **`SysConfig:RelVerbs`**\n    *   **Purpose:** Defines the verbs the engine looks for in text to auto-generate links.\n    *   **Format:** A JSON Array of strings. `[\"supports\", \"causes\", ...]`\n\n3.  **`SysConfig:InverseMap`**\n    *   **Purpose:** Maps a relationship to its logical opposite for bidirectional linking.\n    *   **Format:** JSON Object. `{\"has_child\": \"is_child_of\", ...}`\n\n4.  **`SysConfig:TypeRules`**\n    *   **Purpose:** Defines automatic relationships based on Node Types.\n    *   **Format:** JSON Object. `{\"SourceType->TargetType\": \"relation_name\"}`\n\n5.  **`SysConfig:SystemRelations`**\n    *   **Purpose:** Defines the internal labels used for structural links (parents/children). Allows for localization.\n    *   **Format:** JSON Object. `{\"is_child_of\": \"ist_kind_von\", ...}`\n\n6.  **`SysConfig:Theme`**\n    *   **Purpose:** Controls the color palette of the Orrery visualization.\n    *   **Format:** JSON Object. `{\"nodes\": {\"Type\": \"#hex\"}, \"relationships\": {\"relation\": \"#hex\"}}`\n\n### Operational Safety\n*   **Fallback:** If a configuration node is deleted or contains invalid JSON, the Foundry silently falls back to its safe, hard-coded defaults.\n*   **Latency:** Changes to these nodes typically require a page refresh or a re-triggering of the `generateCrossReferences` function to take effect in the UI.",
+                            "Items": []
+                        }
+                    ]
                 }
             ]
         },
