@@ -1,6 +1,6 @@
 // src/lib/colors.ts
 
-export const NODE_COLORS: { [key: string]: string } = {
+export const DEFAULT_NODE_COLORS: { [key: string]: string } = {
     'Selected': '#e5534b',
     'Project': '#fdc349',
     'Concept': '#39c5cf',
@@ -8,7 +8,7 @@ export const NODE_COLORS: { [key: string]: string } = {
     'Default': '#e6edf3'
 };
 
-export const RELATIONSHIP_COLORS: { [key: string]: string } = {
+export const DEFAULT_RELATIONSHIP_COLORS: { [key: string]: string } = {
     // Structural Links
     'is_child_of': '#6e7681',
     'has_child': '#6e7681',

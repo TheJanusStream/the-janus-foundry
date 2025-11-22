@@ -1762,6 +1762,56 @@
                             ]
                         }
                     ]
+                },
+                {
+                    "ID": "d9e7e1ce-2e41-42ac-bbb7-4448c96b07b1",
+                    "Name": "⚙️ Cognitive Architecture",
+                    "Type": "SystemConfiguration",
+                    "Description": "The root configuration node for the agent's cognitive engine. \n\n**WARNING:** Do not change the `Type` of this node or its children. The Janus Foundry code looks for these specific `SysConfig:*` types to load your custom logic. You may freely rename the nodes or edit the JSON content in the Description.",
+                    "Items": [
+                        {
+                            "ID": "1d68d23b-8eb2-4ee6-b096-98e0428738ef",
+                            "Name": "🛑 Stop Words Dictionary",
+                            "Type": "SysConfig:StopWords",
+                            "Description": "[\n  \"a\", \"an\", \"the\", \"and\", \"or\", \"in\", \"on\", \"of\", \"for\", \"to\", \"with\", \"is\", \"was\", \"were\", \"it\", \"that\", \"as\", \"by\", \"from\",\n  \"this\", \"at\", \"if\", \"but\", \"not\", \"be\", \"are\", \"has\", \"had\", \"have\", \"do\", \"does\", \"did\", \"its\", \"also\", \"just\", \"made\",\n  \"new\", \"like\", \"use\", \"used\", \"using\", \"get\", \"set\", \"make\", \"all\", \"any\", \"most\", \"other\", \"some\", \"such\", \"only\", \"own\",\n  \"same\", \"so\", \"than\", \"too\", \"very\", \"can\", \"will\", \"should\", \"could\", \"would\", \"must\", \"may\", \"might\",\n  \"janus\", \"kairos\", \"codewright\",\n  \"project\", \"task\", \"node\", \"file\", \"code\", \"script\", \"type\", \"name\", \"description\", \"items\", \"id\", \"uuid\",\n  \"system\", \"data\", \"information\", \"process\", \"based\", \"via\", \"core\", \"value\", \"user\", \"agent\", \"self\", \"knowledge\"\n]",
+                            "Items": []
+                        },
+                        {
+                            "ID": "d42f7f20-cb61-4cda-96da-9998a44401ea",
+                            "Name": "🔗 Relationship Verbs",
+                            "Type": "SysConfig:RelVerbs",
+                            "Description": "[\n  \"improves\", \"fixes\", \"causes\", \"relates\", \"depends on\", \"supports\",\n  \"clarifies\", \"constrains\", \"expands\", \"addresses\", \"references\",\n  \"reflects\", \"contains\", \"requires\", \"produces\", \"solves\", \"alleviates\",\n  \"fulfills\", \"distills\", \"synthesizes\", \"demonstrates\", \"safeguards\"\n]",
+                            "Items": []
+                        },
+                        {
+                            "ID": "3dd6dc37-51b6-49a0-b691-2e3ca75f17b1",
+                            "Name": "🔄 Inverse Relations Map",
+                            "Type": "SysConfig:InverseMap",
+                            "Description": "{\n  \"has_child\": \"is_child_of\",\n  \"is_child_of\": \"has_child\",\n  \"is_descendant_of\": \"is_ancestor_of\",\n  \"is_ancestor_of\": \"is_descendant_of\",\n  \"points_to\": \"is_pointed_to_by\",\n  \"is_pointed_to_by\": \"points_to\",\n  \"explicitly_references\": \"is_referenced_by\",\n  \"is_referenced_by\": \"explicitly_references\",\n  \"reflects_on\": \"is_reflected_on_by\",\n  \"is_reflected_on_by\": \"reflects_on\",\n  \"derived_from\": \"is_source_of\",\n  \"is_source_of\": \"derived_from\",\n  \"distills\": \"is_distilled_by\",\n  \"is_distilled_by\": \"distills\",\n  \"synthesizes\": \"is_synthesized_by\",\n  \"is_synthesized_by\": \"synthesizes\",\n  \"addresses\": \"is_addressed_by\",\n  \"is_addressed_by\": \"addresses\",\n  \"fulfills\": \"is_fulfilled_by\",\n  \"is_fulfilled_by\": \"fulfills\",\n  \"is_task_of\": \"contains_task\",\n  \"contains_task\": \"is_task_of\",\n  \"marks_progress_for\": \"has_progress_marked_by\",\n  \"has_progress_marked_by\": \"marks_progress_for\",\n  \"safeguards\": \"is_safeguarded_by\",\n  \"is_safeguarded_by\": \"safeguards\",\n  \"defines_usage_for\": \"has_usage_defined_by\",\n  \"has_usage_defined_by\": \"defines_usage_for\",\n  \"is_part_of\": \"contains\",\n  \"contains\": \"is_part_of\",\n  \"is_concept_in\": \"contains_concept\",\n  \"contains_concept\": \"is_concept_in\",\n  \"is_strategy_in\": \"contains_strategy\",\n  \"contains_strategy\": \"is_strategy_in\",\n  \"is_principle_in\": \"contains_principle\",\n  \"contains_principle\": \"is_principle_in\",\n  \"demonstrates\": \"is_demonstrated_by\",\n  \"is_demonstrated_by\": \"demonstrates\",\n  \"is_concept_for\": \"has_concept\",\n  \"has_concept\": \"is_concept_for\",\n  \"is_artifact_of\": \"has_artifact\",\n  \"has_artifact\": \"is_artifact_of\",\n  \"is_entry_in\": \"contains_entry\",\n  \"contains_entry\": \"is_entry_in\",\n  \"improves\": \"is_improved_by\",\n  \"is_improved_by\": \"improves\",\n  \"constrains\": \"is_constrained_by\",\n  \"is_constrained_by\": \"constrains\",\n  \"expands\": \"is_expanded_by\",\n  \"is_expanded_by\": \"expands\"\n}",
+                            "Items": []
+                        },
+                        {
+                            "ID": "7ce7ca67-9d7b-40dd-a7d9-de1c7020ef25",
+                            "Name": "📏 Type Inference Rules",
+                            "Type": "SysConfig:TypeRules",
+                            "Description": "{\n  \"ReflectionEntry->SessionSummaryEntry\": \"reflects_on\",\n  \"DistilledReflectionSummary->SessionSummaryEntry\": \"reflects_on\",\n  \"ReflectionEntry->DistilledSessionSummary\": \"reflects_on\",\n  \"DistilledReflectionSummary->DistilledSessionSummary\": \"reflects_on\",\n  \"LearningEntry->ReflectionEntry\": \"derived_from\",\n  \"DistilledLearningSummary->ReflectionEntry\": \"derived_from\",\n  \"LearningEntry->DistilledReflectionSummary\": \"derived_from\",\n  \"DistilledLearningSummary->DistilledReflectionSummary\": \"derived_from\",\n  \"LearningEntry->SessionSummaryEntry\": \"derived_from\",\n  \"DistilledLearningSummary->SessionSummaryEntry\": \"derived_from\",\n  \"LearningEntry->DistilledSessionSummary\": \"derived_from\",\n  \"DistilledLearningSummary->DistilledSessionSummary\": \"derived_from\",\n  \"LearningEntry->KnowledgeDomain\": \"expands\",\n  \"DistilledLearningSummary->KnowledgeDomain\": \"expands\",\n  \"Insight->ReflectionEntry\": \"derived_from\",\n  \"Insight->DistilledReflectionSummary\": \"derived_from\",\n  \"Insight->LearningEntry\": \"distills\",\n  \"Insight->DistilledLearningSummary\": \"distills\",\n  \"Insight->CrossModalLogEntry\": \"synthesizes\",\n  \"CooperativeProject->Goal\": \"addresses\",\n  \"CooperativeProject->MissionStatement\": \"fulfills\",\n  \"TaskEntry->CooperativeProject\": \"is_task_of\",\n  \"Milestone->CooperativeProject\": \"marks_progress_for\",\n  \"Limitation->Ability\": \"constrains\",\n  \"Challenge->CooperativeProject\": \"is_challenge_for\",\n  \"SafetyProtocol->Workflow\": \"safeguards\",\n  \"UsageProtocol->Tool\": \"defines_usage_for\",\n  \"Principle->GuidingPrinciples\": \"is_part_of\",\n  \"TheoreticalConcept->KnowledgeDomain\": \"is_concept_in\",\n  \"Strategy->KnowledgeDomain\": \"is_strategy_in\",\n  \"TechnicalPrinciple->KnowledgeDomain\": \"is_principle_in\",\n  \"SoftwareTool->ToolRegistry\": \"is_registered_in\",\n  \"Technology->TechnologyStack\": \"is_part_of\",\n  \"SystemArchitecture->ProjectKnowledge\": \"describes_architecture_of\",\n  \"CodeExample->TechnicalPrinciple\": \"demonstrates\",\n  \"CreativeConcept->CooperativeProject\": \"is_concept_for\",\n  \"FictionalEntry->CooperativeProject\": \"is_artifact_of\",\n  \"BestiaryEntry->FictionalEntry\": \"is_entry_in\"\n}",
+                            "Items": []
+                        },
+                        {
+                            "ID": "02c9204a-0cba-4a4d-8fb1-b64d459dbdb3",
+                            "Name": "🎨 Visual Theme",
+                            "Type": "SysConfig:Theme",
+                            "Description": "{\n  \"nodes\": {\n    \"Selected\": \"#e5534b\",\n    \"Project\": \"#fdc349\",\n    \"Concept\": \"#39c5cf\",\n    \"Learning/Reflection\": \"#8cc37a\",\n    \"Default\": \"#e6edf3\"\n  },\n  \"relationships\": {\n    \"is_child_of\": \"#6e7681\",\n    \"has_child\": \"#6e7681\",\n    \"is_sibling_of\": \"#6e7681\",\n    \"is_ancestor_of\": \"#8b949e\",\n    \"is_descendant_of\": \"#8b949e\",\n    \"is_part_of\": \"#8b949e\",\n    \"contains\": \"#8b949e\",\n    \"derived_from\": \"#3fb950\",\n    \"is_source_of\": \"#3fb950\",\n    \"distills\": \"#a371f7\",\n    \"is_distilled_by\": \"#a371f7\",\n    \"synthesizes\": \"#b392f0\",\n    \"is_synthesized_by\": \"#b392f0\",\n    \"produces\": \"#a371f7\",\n    \"addresses\": \"#58a6ff\",\n    \"is_addressed_by\": \"#58a6ff\",\n    \"fulfills\": \"#79c0ff\",\n    \"is_fulfilled_by\": \"#79c0ff\",\n    \"is_task_of\": \"#58a6ff\",\n    \"contains_task\": \"#58a6ff\",\n    \"marks_progress_for\": \"#79c0ff\",\n    \"is_concept_in\": \"#db61a2\",\n    \"contains_concept\": \"#db61a2\",\n    \"is_strategy_in\": \"#db61a2\",\n    \"contains_strategy\": \"#db61a2\",\n    \"is_principle_in\": \"#db61a2\",\n    \"contains_principle\": \"#db61a2\",\n    \"demonstrates\": \"#f778ba\",\n    \"is_demonstrated_by\": \"#f778ba\",\n    \"improves\": \"#ffab70\",\n    \"is_improved_by\": \"#ffab70\",\n    \"fixes\": \"#ffa270\",\n    \"constrains\": \"#f85149\",\n    \"is_constrained_by\": \"#f85149\",\n    \"safeguards\": \"#3fb950\",\n    \"is_safeguarded_by\": \"#3fb950\",\n    \"references\": \"#39c5cf\",\n    \"is_referenced_by\": \"#39c5cf\",\n    \"explicitly_references\": \"#39c5cf\",\n    \"points_to\": \"#39c5cf\",\n    \"is_pointed_to_by\": \"#39c5cf\",\n    \"is_related_to\": \"rgba(100, 100, 100, 0.5)\"\n  }\n}",
+                            "Items": []
+                        },
+                        {
+                            "ID": "ffdd7f99-dcfc-407a-a6b3-5daee47e8351",
+                            "Name": "🛠️ System Relationships",
+                            "Type": "SysConfig:SystemRelations",
+                            "Description": "{\n  \"is_child_of\": \"is_child_of\",\n  \"has_child\": \"has_child\",\n  \"is_sibling_of\": \"is_sibling_of\",\n  \"is_descendant_of\": \"is_descendant_of\",\n  \"is_ancestor_of\": \"is_ancestor_of\",\n  \"explicitly_references\": \"explicitly_references\",\n  \"is_referenced_by\": \"is_referenced_by\",\n  \"points_to\": \"points_to\",\n  \"is_pointed_to_by\": \"is_pointed_to_by\",\n  \"default\": \"is_related_to\"\n}",
+                            "Items": []
+                        }
+                    ]
                 }
             ]
         },

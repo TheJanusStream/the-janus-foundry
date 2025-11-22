@@ -3,6 +3,7 @@ import { db, type Node, deleteNodeAndChildren, updateNode } from './db';
 import { notify } from "$lib/notifications";
 import { isTauri } from './utils';
 import { base } from '$app/paths';
+import { DEFAULT_NODE_COLORS, DEFAULT_RELATIONSHIP_COLORS } from './colors';
 
 // --- INTERFACES ---
 export interface SourceJsonNode {
@@ -22,6 +23,18 @@ export interface CrossRefLink {
     relation: string;
     provenance: string[];
     confidence: number;
+}
+
+export interface CognitiveConfig {
+    stopWords: Set<string>;
+    relationshipVerbs: string[];
+    inverseRelations: { [key: string]: string };
+    typeRules: { [key: string]: string };
+    systemRelations: { [key: string]: string }; // <-- NEW
+    theme: {
+        nodes: { [key: string]: string };
+        relationships: { [key: string]: string };
+    };
 }
 
 // --- Patch Operation Interfaces ---
@@ -45,12 +58,12 @@ interface ReplaceOperation extends BasePatchOperation {
 }
 type PatchOperation = AddOperation | RemoveOperation | ReplaceOperation;
 
-// --- CONSTANTS ---
-const COMMON_WORD_PERCENTILE_THRESHOLD = 0.10; // Top 10% of words are considered too common
-const MIN_SHARED_KEYWORDS_THRESHOLD = 2;      // Require at least 2 shared keywords
-const MAX_LINKS_PER_NODE = 7;                 // Limit max outgoing links per node
+// --- DEFAULT FALLBACKS (Factory Settings) ---
+const COMMON_WORD_PERCENTILE_THRESHOLD = 0.10;
+const MIN_SHARED_KEYWORDS_THRESHOLD = 2;
+const MAX_LINKS_PER_NODE = 7;
 
-const BASE_STOP_WORDS = new Set([
+const DEFAULT_STOP_WORDS = new Set([
     'a', 'an', 'the', 'and', 'or', 'in', 'on', 'of', 'for', 'to', 'with', 'is', 'was', 'were', 'it', 'that', 'as', 'by', 'from',
     'this', 'at', 'if', 'but', 'not', 'be', 'are', 'has', 'had', 'have', 'do', 'does', 'did', 'its', 'also', 'just', 'made',
     'new', 'like', 'use', 'used', 'using', 'get', 'set', 'make', 'all', 'any', 'most', 'other', 'some', 'such', 'only', 'own',
@@ -60,14 +73,14 @@ const BASE_STOP_WORDS = new Set([
     'system', 'data', 'information', 'process', 'based', 'via', 'core', 'value', 'user', 'agent', 'self', 'knowledge'
 ]);
 
-const RELATIONSHIP_VERBS = [
+const DEFAULT_REL_VERBS = [
     'improves', 'fixes', 'causes', 'relates', 'depends on', 'supports',
     'clarifies', 'constrains', 'expands', 'addresses', 'references',
     'reflects', 'contains', 'requires', 'produces', 'solves', 'alleviates',
     'fulfills', 'distills', 'synthesizes', 'demonstrates', 'safeguards'
 ];
 
-const INVERSE_RELATIONS: { [key: string]: string } = {
+const DEFAULT_INVERSE_RELATIONS: { [key: string]: string } = {
     'has_child': 'is_child_of',
     'is_child_of': 'has_child',
     'is_descendant_of': 'is_ancestor_of',
@@ -120,8 +133,20 @@ const INVERSE_RELATIONS: { [key: string]: string } = {
     'is_expanded_by': 'expands'
 };
 
-const TYPE_RULES: { [key: string]: string } = {
-    // Meta-Learning & Reflection
+const DEFAULT_SYSTEM_RELATIONS: { [key: string]: string } = {
+    is_child_of: 'is_child_of',
+    has_child: 'has_child',
+    is_sibling_of: 'is_sibling_of',
+    is_descendant_of: 'is_descendant_of',
+    is_ancestor_of: 'is_ancestor_of',
+    explicitly_references: 'explicitly_references',
+    is_referenced_by: 'is_referenced_by',
+    points_to: 'points_to',
+    is_pointed_to_by: 'is_pointed_to_by',
+    default: 'is_related_to'
+};
+
+const DEFAULT_TYPE_RULES: { [key: string]: string } = {
     'ReflectionEntry->SessionSummaryEntry': 'reflects_on',
     'DistilledReflectionSummary->SessionSummaryEntry': 'reflects_on',
     'ReflectionEntry->DistilledSessionSummary': 'reflects_on',
@@ -141,56 +166,39 @@ const TYPE_RULES: { [key: string]: string } = {
     'Insight->LearningEntry': 'distills',
     'Insight->DistilledLearningSummary': 'distills',
     'Insight->CrossModalLogEntry': 'synthesizes',
-
-    // Project & Goal Management
     'CooperativeProject->Goal': 'addresses',
     'CooperativeProject->MissionStatement': 'fulfills',
     'TaskEntry->CooperativeProject': 'is_task_of',
     'Milestone->CooperativeProject': 'marks_progress_for',
-
-    // Capabilities & Constraints
     'Limitation->Ability': 'constrains',
     'Challenge->CooperativeProject': 'is_challenge_for',
     'SafetyProtocol->Workflow': 'safeguards',
     'UsageProtocol->Tool': 'defines_usage_for',
-
-    // Foundational & Abstract Concepts
     'Principle->GuidingPrinciples': 'is_part_of',
     'TheoreticalConcept->KnowledgeDomain': 'is_concept_in',
     'Strategy->KnowledgeDomain': 'is_strategy_in',
     'TechnicalPrinciple->KnowledgeDomain': 'is_principle_in',
-
-    // Technical & Software Artifacts
     'SoftwareTool->ToolRegistry': 'is_registered_in',
     'Technology->TechnologyStack': 'is_part_of',
     'SystemArchitecture->ProjectKnowledge': 'describes_architecture_of',
     'CodeExample->TechnicalPrinciple': 'demonstrates',
-
-    // Creative & Fictional Artifacts
     'CreativeConcept->CooperativeProject': 'is_concept_for',
     'FictionalEntry->CooperativeProject': 'is_artifact_of',
     'BestiaryEntry->FictionalEntry': 'is_entry_in',
 };
 
-// --- HELPER FUNCTIONS ---
+// --- COGNITIVE ENGINE LOGIC ---
 
-/**
- * A simple keyword extractor. Converts text to lowercase, removes punctuation, 
- * splits by whitespace, and filters out short words.
- */
 function extractInitialKeywords(textContent: string): Set<string> {
     return new Set(
         textContent
             .toLowerCase()
-            .replace(/[^\w\s-]/g, ' ') // Keep hyphens as part of words
+            .replace(/[^\w\s-]/g, ' ')
             .split(/\s+/)
             .filter(word => word.length > 2)
     );
 }
 
-/**
- * Calculates the intersection of two sets.
- */
 function setIntersection<T>(setA: Set<T>, setB: Set<T>): Set<T> {
     const intersection = new Set<T>();
     for (const elem of setB) {
@@ -217,38 +225,41 @@ function inferRelationship(
     nodeA: Node,
     nodeB: Node,
     sharedKeywords: string[],
-    nodeMap: Map<string, Node>
+    nodeMap: Map<string, Node>,
+    config: CognitiveConfig
 ): string {
-    // 1. Structural Analysis (Highest Precedence)
-    if (nodeA.parentId === nodeB.id) return 'is_child_of';
-    if (nodeB.parentId === nodeA.id) return 'has_child';
-    if (nodeA.parentId && nodeA.parentId === nodeB.parentId) return 'is_sibling_of';
-    if (isAncestor(nodeA.id, nodeB.id, nodeMap)) return 'is_descendant_of';
-    if (isAncestor(nodeB.id, nodeA.id, nodeMap)) return 'is_ancestor_of';
+    // 1. Structural Analysis (Intrinsic to DB)
+    if (nodeA.parentId === nodeB.id) return config.systemRelations.is_child_of;
+    if (nodeB.parentId === nodeA.id) return config.systemRelations.has_child;
+    if (nodeA.parentId && nodeA.parentId === nodeB.parentId) return config.systemRelations.is_sibling_of;
+    if (isAncestor(nodeA.id, nodeB.id, nodeMap)) return config.systemRelations.is_descendant_of;
+    if (isAncestor(nodeB.id, nodeA.id, nodeMap)) return config.systemRelations.is_ancestor_of;
 
-    // 2. Explicit Reference Parsing
-    if (nodeA.description.includes(nodeB.id)) return 'explicitly_references';
-    if (nodeB.description.includes(nodeA.id)) return 'is_referenced_by';
-    if (nodeA.type === 'ReferenceValue' && nodeA.description.trim() === nodeB.id) return 'points_to';
-    if (nodeB.type === 'ReferenceValue' && nodeB.description.trim() === nodeA.id) return 'is_pointed_to_by';
+    // 2. Explicit Reference Parsing (Intrinsic to Content)
+    if (nodeA.description.includes(nodeB.id)) return config.systemRelations.explicitly_references;
+    if (nodeB.description.includes(nodeA.id)) return config.systemRelations.is_referenced_by;
+    if (nodeA.type === 'ReferenceValue' && nodeA.description.trim() === nodeB.id) return config.systemRelations.points_to;
+    if (nodeB.type === 'ReferenceValue' && nodeB.description.trim() === nodeA.id) return config.systemRelations.is_pointed_to_by;
 
-    // 3. Type-to-Type Logic
+    // 3. Dynamic Type-to-Type Logic
     const typeRuleKey1 = `${nodeA.type}->${nodeB.type}`;
-    if (TYPE_RULES[typeRuleKey1]) return TYPE_RULES[typeRuleKey1];
+    if (config.typeRules[typeRuleKey1]) return config.typeRules[typeRuleKey1];
+
     const typeRuleKey2 = `${nodeB.type}->${nodeA.type}`;
-    if (TYPE_RULES[typeRuleKey2]) {
-        const inverse = INVERSE_RELATIONS[TYPE_RULES[typeRuleKey2]];
+    if (config.typeRules[typeRuleKey2]) {
+        const inverse = config.inverseRelations[config.typeRules[typeRuleKey2]];
         if (inverse) return inverse;
     }
 
-    // 4. Keyword-Based Verb Extraction
+    // 4. Dynamic Keyword-Based Verb Extraction
     const textA = (nodeA.name + ' ' + nodeA.description).toLowerCase();
     const sentencesA = textA.split('. ');
     for (const keyword of sharedKeywords) {
         for (const sentence of sentencesA) {
             if (sentence.includes(keyword)) {
-                for (const verb of RELATIONSHIP_VERBS) {
+                for (const verb of config.relationshipVerbs) {
                     if (sentence.includes(verb)) {
+                        // Simple normalization: replace spaces with underscores
                         return verb.replace(/ /g, '_');
                     }
                 }
@@ -257,8 +268,195 @@ function inferRelationship(
     }
 
     // 5. Default Fallback
-    return 'is_related_to';
+    return config.systemRelations.default;
 }
+
+/**
+ * Fetches the cognitive configuration from the database nodes.
+ * Falls back to hardcoded defaults if nodes are missing or corrupt.
+ */
+export async function fetchCognitiveConfig(): Promise<CognitiveConfig> {
+    const config: CognitiveConfig = {
+        stopWords: DEFAULT_STOP_WORDS,
+        relationshipVerbs: DEFAULT_REL_VERBS,
+        inverseRelations: DEFAULT_INVERSE_RELATIONS,
+        typeRules: DEFAULT_TYPE_RULES,
+        systemRelations: DEFAULT_SYSTEM_RELATIONS,
+        theme: {
+            nodes: DEFAULT_NODE_COLORS,
+            relationships: DEFAULT_RELATIONSHIP_COLORS
+        }
+    };
+
+    try {
+        // Use .filter() because 'type' is not indexed in version 1 DB
+        const configNodes = await db.nodes
+            .filter(node => node.type.startsWith('SysConfig:'))
+            .toArray();
+
+        for (const node of configNodes) {
+            try {
+                const content = JSON.parse(node.description);
+
+                switch (node.type) {
+                    case 'SysConfig:StopWords':
+                        if (Array.isArray(content)) config.stopWords = new Set([...DEFAULT_STOP_WORDS, ...content]);
+                        break;
+                    case 'SysConfig:RelVerbs':
+                        if (Array.isArray(content)) config.relationshipVerbs = content;
+                        break;
+                    case 'SysConfig:InverseMap':
+                        config.inverseRelations = content;
+                        break;
+                    case 'SysConfig:TypeRules':
+                        config.typeRules = content;
+                        break;
+                    case 'SysConfig:SystemRelations':
+                        config.systemRelations = { ...DEFAULT_SYSTEM_RELATIONS, ...content };
+                        break;
+                    case 'SysConfig:Theme':
+                        if (content.nodes) config.theme.nodes = content.nodes;
+                        if (content.relationships) config.theme.relationships = content.relationships;
+                        break;
+                }
+            } catch (parseErr) {
+                console.warn(`Failed to parse config node ${node.name} (${node.type}). Using defaults.`, parseErr);
+            }
+        }
+    } catch (err) {
+        console.error("Error fetching cognitive config from DB. Using defaults.", err);
+    }
+
+    return config;
+}
+
+/**
+ * Generates cross-references using the dynamic cognitive configuration.
+ * Returns both the index and the theme for the store to use.
+ */
+export async function generateCrossReferences(): Promise<{ index: CrossRefIndex, theme: CognitiveConfig['theme'] }> {
+    const allNodes = await db.nodes.toArray();
+    const config = await fetchCognitiveConfig();
+
+    if (allNodes.length < 2) return { index: {}, theme: config.theme };
+
+    const nodesKeywords = new Map<string, Set<string>>();
+    const uuidToNodeMap = new Map<string, Node>();
+    const globalKeywordCounts = new Map<string, number>();
+
+    allNodes.forEach(node => uuidToNodeMap.set(node.id, node));
+
+    // 1. Global Keyword Census
+    for (const node of allNodes) {
+        const textContent = `${node.name} ${node.description}`;
+        const keywords = extractInitialKeywords(textContent);
+        for (const keyword of keywords) {
+            globalKeywordCounts.set(keyword, (globalKeywordCounts.get(keyword) || 0) + 1);
+        }
+    }
+
+    // 2. Dynamic Stop Word Generation
+    const sortedKeywords = Array.from(globalKeywordCounts.entries()).sort((a, b) => b[1] - a[1]);
+    const numDynamicStops = Math.floor(sortedKeywords.length * COMMON_WORD_PERCENTILE_THRESHOLD);
+    const dynamicStopWords = new Set(sortedKeywords.slice(0, numDynamicStops).map(entry => entry[0]));
+    // Merge dynamic stops with the Configured stop words
+    const finalStopWords = new Set([...config.stopWords, ...dynamicStopWords]);
+
+    // 3. Significant Keyword Extraction
+    for (const node of allNodes) {
+        const textContent = `${node.name} ${node.description}`;
+        const initialKeywords = extractInitialKeywords(textContent);
+        const significantKeywords = new Set([...initialKeywords].filter(kw => !finalStopWords.has(kw)));
+
+        if (significantKeywords.size > 0) {
+            nodesKeywords.set(node.id, significantKeywords);
+        }
+    }
+
+    // 4. Inverted Indexing & Link Generation
+    const tempCrossrefs = new Map<string, { target_id: string; weight: number; relation: string; provenance: string[] }[]>();
+    const processedPairs = new Set<string>();
+    let maxWeight = 0;
+
+    const invertedIndex = new Map<string, Set<string>>();
+    for (const [uuid, keywords] of nodesKeywords.entries()) {
+        for (const keyword of keywords) {
+            if (!invertedIndex.has(keyword)) {
+                invertedIndex.set(keyword, new Set());
+            }
+            invertedIndex.get(keyword)!.add(uuid);
+        }
+    }
+
+    for (const [uuid, keywords] of nodesKeywords.entries()) {
+        const relatedDocs = new Set<string>();
+        keywords.forEach(kw => {
+            const docs = [...(invertedIndex.get(kw) || [])];
+            docs.forEach(docId => relatedDocs.add(docId));
+        });
+
+        for (const otherUuid of relatedDocs) {
+            if (uuid === otherUuid) continue;
+
+            const [uuid1, uuid2] = [uuid, otherUuid].sort();
+            const pairKey = `${uuid1}|${uuid2}`;
+            if (processedPairs.has(pairKey)) continue;
+            processedPairs.add(pairKey);
+
+            const keywords1 = nodesKeywords.get(uuid1);
+            const keywords2 = nodesKeywords.get(uuid2);
+
+            if (keywords1 && keywords2) {
+                const sharedKeywords = setIntersection(keywords1, keywords2);
+                const weight = sharedKeywords.size;
+
+                if (weight > maxWeight) maxWeight = weight;
+
+                if (weight >= MIN_SHARED_KEYWORDS_THRESHOLD) {
+                    const node1 = uuidToNodeMap.get(uuid1)!;
+                    const node2 = uuidToNodeMap.get(uuid2)!;
+                    const provenance = Array.from(sharedKeywords).sort();
+
+                    // PASS CONFIG HERE
+                    const relation = inferRelationship(node1, node2, provenance, uuidToNodeMap, config);
+
+                    // Use Configured Inverse Map
+                    const inverse = config.inverseRelations[relation] || relation;
+
+                    if (!tempCrossrefs.has(uuid1)) tempCrossrefs.set(uuid1, []);
+                    if (!tempCrossrefs.has(uuid2)) tempCrossrefs.set(uuid2, []);
+
+                    tempCrossrefs.get(uuid1)!.push({ target_id: uuid2, weight, relation: relation, provenance });
+                    tempCrossrefs.get(uuid2)!.push({ target_id: uuid1, weight, relation: inverse, provenance });
+                }
+            }
+        }
+    }
+
+    // 5. Normalization & Pruning
+    const finalCrossrefIndex: CrossRefIndex = {};
+    for (const [uuid, links] of tempCrossrefs.entries()) {
+        const processedLinks = links.map(link => {
+            let confidence = 0;
+            if (maxWeight > 0) {
+                confidence = maxWeight > 1 ? Math.log1p(link.weight) / Math.log1p(maxWeight) : 1.0;
+            }
+            return {
+                target_id: link.target_id,
+                relation: link.relation,
+                provenance: link.provenance,
+                confidence: parseFloat(confidence.toFixed(3))
+            };
+        });
+
+        processedLinks.sort((a, b) => b.confidence - a.confidence);
+        finalCrossrefIndex[uuid] = processedLinks.slice(0, MAX_LINKS_PER_NODE);
+    }
+
+    // Return BOTH the index and the loaded theme
+    return { index: finalCrossrefIndex, theme: config.theme };
+}
+
 
 /**
  * Recursively traverses the imported JSON tree, generating new UUIDs and
@@ -345,121 +543,6 @@ export async function importSourceJson(): Promise<void> {
 
         input.click();
     });
-}
-
-export async function generateCrossReferences(): Promise<CrossRefIndex> {
-    const allNodes = await db.nodes.toArray();
-    if (allNodes.length < 2) return {};
-
-    const nodesKeywords = new Map<string, Set<string>>();
-    const uuidToNodeMap = new Map<string, Node>();
-    const globalKeywordCounts = new Map<string, number>();
-
-    allNodes.forEach(node => uuidToNodeMap.set(node.id, node));
-
-    // 1. Global Keyword Census
-    for (const node of allNodes) {
-        const textContent = `${node.name} ${node.description}`;
-        const keywords = extractInitialKeywords(textContent);
-        for (const keyword of keywords) {
-            globalKeywordCounts.set(keyword, (globalKeywordCounts.get(keyword) || 0) + 1);
-        }
-    }
-
-    // 2. Dynamic Stop Word Generation
-    const sortedKeywords = Array.from(globalKeywordCounts.entries()).sort((a, b) => b[1] - a[1]);
-    const numDynamicStops = Math.floor(sortedKeywords.length * COMMON_WORD_PERCENTILE_THRESHOLD);
-    const dynamicStopWords = new Set(sortedKeywords.slice(0, numDynamicStops).map(entry => entry[0]));
-    const finalStopWords = new Set([...BASE_STOP_WORDS, ...dynamicStopWords]);
-
-    // 3. Significant Keyword Extraction
-    for (const node of allNodes) {
-        const textContent = `${node.name} ${node.description}`;
-        const initialKeywords = extractInitialKeywords(textContent);
-        const significantKeywords = new Set([...initialKeywords].filter(kw => !finalStopWords.has(kw)));
-
-        if (significantKeywords.size > 0) {
-            nodesKeywords.set(node.id, significantKeywords);
-        }
-    }
-
-    // 4. Inverted Indexing & Link Generation
-    const tempCrossrefs = new Map<string, { target_id: string; weight: number; relation: string; provenance: string[] }[]>();
-    const processedPairs = new Set<string>();
-    let maxWeight = 0;
-
-    const invertedIndex = new Map<string, Set<string>>();
-    for (const [uuid, keywords] of nodesKeywords.entries()) {
-        for (const keyword of keywords) {
-            if (!invertedIndex.has(keyword)) {
-                invertedIndex.set(keyword, new Set());
-            }
-            invertedIndex.get(keyword)!.add(uuid);
-        }
-    }
-
-    for (const [uuid, keywords] of nodesKeywords.entries()) {
-        const relatedDocs = new Set<string>();
-        keywords.forEach(kw => {
-            const docs = [...(invertedIndex.get(kw) || [])];
-            docs.forEach(docId => relatedDocs.add(docId));
-        });
-
-        for (const otherUuid of relatedDocs) {
-            if (uuid === otherUuid) continue;
-
-            const [uuid1, uuid2] = [uuid, otherUuid].sort();
-            const pairKey = `${uuid1}|${uuid2}`;
-            if (processedPairs.has(pairKey)) continue;
-            processedPairs.add(pairKey);
-
-            const keywords1 = nodesKeywords.get(uuid1);
-            const keywords2 = nodesKeywords.get(uuid2);
-
-            if (keywords1 && keywords2) {
-                const sharedKeywords = setIntersection(keywords1, keywords2);
-                const weight = sharedKeywords.size;
-
-                if (weight > maxWeight) maxWeight = weight;
-
-                if (weight >= MIN_SHARED_KEYWORDS_THRESHOLD) {
-                    const node1 = uuidToNodeMap.get(uuid1)!;
-                    const node2 = uuidToNodeMap.get(uuid2)!;
-                    const provenance = Array.from(sharedKeywords).sort();
-
-                    const relation = inferRelationship(node1, node2, provenance, uuidToNodeMap);
-                    const inverse = INVERSE_RELATIONS[relation] || relation;
-
-                    if (!tempCrossrefs.has(uuid1)) tempCrossrefs.set(uuid1, []);
-                    if (!tempCrossrefs.has(uuid2)) tempCrossrefs.set(uuid2, []);
-
-                    tempCrossrefs.get(uuid1)!.push({ target_id: uuid2, weight, relation: relation, provenance });
-                    tempCrossrefs.get(uuid2)!.push({ target_id: uuid1, weight, relation: inverse, provenance });
-                }
-            }
-        }
-    }
-
-    // 5. Normalization & Pruning
-    const finalCrossrefIndex: CrossRefIndex = {};
-    for (const [uuid, links] of tempCrossrefs.entries()) {
-        const processedLinks = links.map(link => {
-            let confidence = 0;
-            if (maxWeight > 0) {
-                confidence = maxWeight > 1 ? Math.log1p(link.weight) / Math.log1p(maxWeight) : 1.0;
-            }
-            return {
-                target_id: link.target_id,
-                relation: link.relation,
-                provenance: link.provenance,
-                confidence: parseFloat(confidence.toFixed(3))
-            };
-        });
-
-        processedLinks.sort((a, b) => b.confidence - a.confidence);
-        finalCrossrefIndex[uuid] = processedLinks.slice(0, MAX_LINKS_PER_NODE);
-    }
-    return finalCrossrefIndex;
 }
 
 // --- EXPORT FUNCTIONS ---

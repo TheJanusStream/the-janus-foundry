@@ -4,6 +4,7 @@ import { derived, writable } from 'svelte/store';
 import { db, type Node } from './db';
 import { generateCrossReferences } from './io';
 import type { CrossRefIndex } from './io';
+import { DEFAULT_NODE_COLORS, DEFAULT_RELATIONSHIP_COLORS } from './colors';
 
 // Define a richer type for in-memory representation
 export type TreeNode = Node & { children: TreeNode[] };
@@ -14,8 +15,11 @@ export const selectedNode = writable<TreeNode | null>(null);
 export const crossref = writable<CrossRefIndex>({});
 export const isSearchOpen = writable(false);
 
+export const theme = writable({
+  nodes: DEFAULT_NODE_COLORS,
+  relationships: DEFAULT_RELATIONSHIP_COLORS
+});
 
-// --- NEW ---
 // A derived store that holds a map of all nodes by their ID for fast lookups
 export const flatNodeMap = derived(tree, ($tree) => {
   const map = new Map<string, TreeNode>();
@@ -29,7 +33,6 @@ export const flatNodeMap = derived(tree, ($tree) => {
   return map;
 });
 
-// --- NEW ---
 // A derived store that automatically calculates the set of ancestor IDs for the selected node
 export const ancestorIds = derived(
   [selectedNode, flatNodeMap],
@@ -86,10 +89,12 @@ export async function loadTree() {
 }
 
 /**
-+ * Generates the cross-reference index from the database and updates the store.
-+ */
-
+ * Generates the cross-reference index from the database AND updates the visual theme.
+ */
 export async function loadCrossref() {
-  const index = await generateCrossReferences();
+  // Now receiving both data and theme configuration
+  const { index, theme: loadedTheme } = await generateCrossReferences();
+
   crossref.set(index);
+  theme.set(loadedTheme);
 }

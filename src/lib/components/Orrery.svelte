@@ -1,12 +1,10 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import ForceGraph from "force-graph";
-  import { tree, selectedNode, crossref, flatNodeMap } from "$lib/store";
+  import { tree, selectedNode, crossref, flatNodeMap, theme } from "$lib/store";
   import type { TreeNode } from "$lib/store";
   import type { CrossRefLink } from "$lib/io";
   import OrreryLegend from "./OrreryLegend.svelte";
-  import { NODE_COLORS, RELATIONSHIP_COLORS } from "$lib/colors";
-
 
   let container: HTMLDivElement;
   let Graph: any = null;
@@ -45,21 +43,18 @@
         .linkDirectionalParticles(1)
         .linkDirectionalParticleWidth(1.2)
         .linkColor((link) => {
-          // Resolve source and target IDs, whether they are objects or strings
           const sourceId = (link.source as any).id || link.source;
           const targetId = (link.target as any).id || link.target;
-
-          // Find the specific link in our cross-reference index
           const sourceLinks = $crossref[sourceId] || [];
           const specificLink = sourceLinks.find(
             (l) => l.target_id === targetId,
           );
 
-          // Return the color from our map, or the default if not found
-          if (specificLink && RELATIONSHIP_COLORS[specificLink.relation]) {
-            return RELATIONSHIP_COLORS[specificLink.relation];
+          // USE DYNAMIC THEME
+          if (specificLink && $theme.relationships[specificLink.relation]) {
+            return $theme.relationships[specificLink.relation];
           }
-          return RELATIONSHIP_COLORS["is_related_to"]; // Fallback color
+          return $theme.relationships["is_related_to"]; // Fallback
         })
         .linkWidth((link) => {
           const sourceId = (link.source as any).id || link.source;
@@ -167,12 +162,19 @@
       });
       Graph.nodeColor((node: { id: string; type: string }) => {
         if ($selectedNode && node.id === $selectedNode.id)
-          return NODE_COLORS["Selected"];
-        if (node.type.includes("Project")) return NODE_COLORS["Project"];
-        if (node.type.includes("Concept")) return NODE_COLORS["Concept"];
-        if (node.type.includes("Learning") || node.type.includes("Reflection"))
-          return NODE_COLORS["Learning/Reflection"];
-        return NODE_COLORS["Default"];
+          return $theme.nodes["Selected"]; // Dynamic
+
+        // Check dynamic keys first
+        for (const [key, color] of Object.entries($theme.nodes)) {
+          if (
+            key !== "Selected" &&
+            key !== "Default" &&
+            node.type.includes(key)
+          ) {
+            return color;
+          }
+        }
+        return $theme.nodes["Default"];
       });
 
       if (initialLoad) {

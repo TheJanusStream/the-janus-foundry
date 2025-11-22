@@ -1,6 +1,6 @@
 <script lang="ts">
     import { slide } from "svelte/transition";
-    import { NODE_COLORS, RELATIONSHIP_COLORS } from "$lib/colors";
+    import { theme } from "$lib/store";
     let isExpanded = false;
 </script>
 
@@ -14,7 +14,8 @@
             <div class="section">
                 <h4>Nodes</h4>
                 <ul>
-                    {#each Object.entries(NODE_COLORS) as [name, color]}
+                    <!-- Iterate over $theme.nodes -->
+                    {#each Object.entries($theme.nodes) as [name, color]}
                         <li>
                             <span
                                 class="color-swatch"
@@ -28,7 +29,8 @@
             <div class="section">
                 <h4>Relationships</h4>
                 <ul>
-                    {#each Object.entries(RELATIONSHIP_COLORS) as [name, color]}
+                    <!-- Iterate over $theme.relationships -->
+                    {#each Object.entries($theme.relationships) as [name, color]}
                         <li>
                             <span
                                 class="color-swatch link-swatch"
