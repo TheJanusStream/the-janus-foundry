@@ -289,9 +289,9 @@ export async function fetchCognitiveConfig(): Promise<CognitiveConfig> {
     };
 
     try {
-        // Use .filter() because 'type' is not indexed in version 1 DB
         const configNodes = await db.nodes
-            .filter(node => node.type.startsWith('SysConfig:'))
+            .where('type')
+            .startsWith('SysConfig:')
             .toArray();
 
         for (const node of configNodes) {

@@ -5,6 +5,7 @@ export const DEFAULT_NODE_COLORS: { [key: string]: string } = {
     'Project': '#fdc349',
     'Concept': '#39c5cf',
     'Learning/Reflection': '#8cc37a',
+    'SysConfig': '#6e7681',
     'Default': '#e6edf3'
 };
 
