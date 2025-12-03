@@ -192,6 +192,44 @@
     }
   }
 
+  async function handleExecute() {
+    if (!$selectedNode || !isTauri()) return;
+
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+
+      notify("Executing...", "info");
+      const output = (await invoke("execute_code", {
+        language: $selectedNode.type,
+        code: $selectedNode.description,
+      })) as string;
+
+      // Update or Create Output Node
+      const children = $selectedNode.children || [];
+      const outputNode = children.find((c) => c.type === "Exec:Output");
+
+      if (outputNode) {
+        await updateNode(outputNode.id, { description: output });
+      } else {
+        // Create new node manually to set specific fields immediately
+        const newId = crypto.randomUUID();
+        await db.nodes.add({
+          id: newId,
+          parentId: $selectedNode.id,
+          name: "Output",
+          type: "Exec:Output",
+          description: output,
+          sortOrder: children.length,
+        });
+      }
+
+      await loadTree(); // Refresh UI
+      notify("Execution successful.", "success");
+    } catch (err) {
+      notify(`Execution failed: ${err}`, "error");
+    }
+  }
+
   function handleGlobalKeydown(event: KeyboardEvent) {
     // Cmd+K or Ctrl+K
     if ((event.metaKey || event.ctrlKey) && event.key === "k") {
@@ -291,7 +329,21 @@
             <h3>{$selectedNode.name}</h3>
             <p class="type-tag">Type: {$selectedNode.type}</p>
             <div class="description-content">
-              <Exmarkdown md={$selectedNode.description} />
+              {#if $selectedNode.type.startsWith("Exec:") || $selectedNode.type.startsWith("SysConfig:")}
+                {#if isTauri() && $selectedNode.type.startsWith("Exec:")}
+                  <div class="code-header">
+                    <span class="lang-badge"
+                      >{$selectedNode.type.split(":")[1]}</span
+                    >
+                    <button class="run-button" on:click={handleExecute}
+                      >▶ Run</button
+                    >
+                  </div>
+                {/if}
+                <pre><code>{$selectedNode.description}</code></pre>
+              {:else}
+                <Exmarkdown md={$selectedNode.description} />
+              {/if}
             </div>
           </div>
         {:else}
@@ -431,6 +483,20 @@
     border: 1px solid #30363d;
     padding: 1px 15px;
     border-radius: 4px;
+  }
+  pre {
+    white-space: pre-wrap; /* Wrap text so it doesn't break layout */
+    word-wrap: break-word;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+      "Liberation Mono", monospace;
+    font-size: 0.9em;
+    color: #e6edf3;
+    background-color: #161b22; /* Slightly lighter than bg for contrast */
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    overflow-x: auto;
+    border: 1px solid #30363d;
   }
   .edit-mode {
     display: flex;
@@ -574,5 +640,44 @@
   }
   .divider:hover {
     background-color: #fdc349;
+  }
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    background-color: #21262d;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border: 1px solid #30363d;
+    border-bottom: none;
+    margin-top: 10px;
+  }
+  /* Remove top margin from pre to attach to header */
+  .code-header + pre {
+    margin-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+  .lang-badge {
+    font-size: 0.8em;
+    color: #8b949e;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .run-button {
+    background-color: #238636;
+    color: #ffffff;
+    border: 1px solid rgba(240, 246, 252, 0.1);
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 0.85em;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+  }
+  .run-button:hover {
+    background-color: #2ea043;
   }
 </style>
