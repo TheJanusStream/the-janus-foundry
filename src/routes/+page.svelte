@@ -198,24 +198,45 @@
     try {
       const { invoke } = await import("@tauri-apps/api/core");
 
-      notify("Executing...", "info");
+      // Determine Source (Code) and Target (Output) based on context
+      let codeNode = $selectedNode;
+      let outputNodeId: string | undefined;
+
+      if ($selectedNode.type === "Exec:Output") {
+        // Context: Re-running from the Output node itself
+        const nodeMap = get(flatNodeMap);
+        if (!$selectedNode.parentId || !nodeMap.has($selectedNode.parentId)) {
+          throw new Error(
+            "Orphaned output node: cannot find parent executable.",
+          );
+        }
+        codeNode = nodeMap.get($selectedNode.parentId)!;
+        outputNodeId = $selectedNode.id;
+      } else {
+        // Context: Running from the Executable node
+        const children = $selectedNode.children || [];
+        const existingOutput = children.find((c) => c.type === "Exec:Output");
+        if (existingOutput) {
+          outputNodeId = existingOutput.id;
+        }
+      }
+
+      notify(`Executing ${codeNode.type.split(":")[1]}...`, "info");
+
       const output = (await invoke("execute_code", {
-        language: $selectedNode.type,
-        code: $selectedNode.description,
+        language: codeNode.type,
+        code: codeNode.description,
       })) as string;
 
-      // Update or Create Output Node
-      const children = $selectedNode.children || [];
-      const outputNode = children.find((c) => c.type === "Exec:Output");
-
-      if (outputNode) {
-        await updateNode(outputNode.id, { description: output });
+      if (outputNodeId) {
+        await updateNode(outputNodeId, { description: output });
       } else {
-        // Create new node manually to set specific fields immediately
+        // Create new output node
+        const children = codeNode.children || [];
         const newId = crypto.randomUUID();
         await db.nodes.add({
           id: newId,
-          parentId: $selectedNode.id,
+          parentId: codeNode.id,
           name: "Output",
           type: "Exec:Output",
           description: output,
@@ -335,9 +356,11 @@
                     <span class="lang-badge"
                       >{$selectedNode.type.split(":")[1]}</span
                     >
-                    <button class="run-button" on:click={handleExecute}
-                      >▶ Run</button
-                    >
+                    <button class="run-button" on:click={handleExecute}>
+                      {$selectedNode.type === "Exec:Output"
+                        ? "▶ Rerun Parent"
+                        : "▶ Run"}
+                    </button>
                   </div>
                 {/if}
                 <pre><code>{$selectedNode.description}</code></pre>
