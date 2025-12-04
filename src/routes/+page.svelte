@@ -8,6 +8,7 @@
     loadTree,
     loadCrossref,
     type TreeNode as StoreTreeNode,
+    flatNodeMap,
   } from "$lib/store";
   import { db, updateNode, createNode } from "$lib/db";
   import TreeNode from "$lib/components/TreeNode.svelte";
@@ -37,6 +38,17 @@
 
   let sidebarWidth = 30; // Initial width in percent
   let isResizing = false;
+
+  // we automatically swap the stale selectedNode object for the fresh one from the new tree.
+  $: if ($flatNodeMap.size > 0 && $selectedNode) {
+    const freshNode = $flatNodeMap.get($selectedNode.id);
+    // If we found the same ID in the new map, but the object reference is different, update it.
+    if (freshNode && freshNode !== $selectedNode) {
+      // Keep the edit mode state if we are just refreshing data
+      // But update the store so the UI reflects the new tree structure (children, etc)
+      selectedNode.set(freshNode);
+    }
+  }
 
   function startResize(event: MouseEvent) {
     document.body.classList.add("resizing");
@@ -86,19 +98,6 @@
     await updateNode($selectedNode.id, changes);
     await loadTree();
     await loadCrossref();
-
-    const findNode = (
-      nodes: StoreTreeNode[],
-      id: string,
-    ): StoreTreeNode | null => {
-      for (const node of nodes) {
-        if (node.id === id) return node;
-        const found = findNode(node.children, id);
-        if (found) return found;
-      }
-      return null;
-    };
-    selectedNode.set(findNode($tree, $selectedNode.id));
     editMode = false;
   }
 
@@ -116,8 +115,6 @@
       const rootNodes = get(tree);
       if (rootNodes.length > 0) {
         selectedNode.set(rootNodes[0]);
-      } else {
-        selectedNode.set(null);
       }
       notify("Memory has been reset to the Agora template.", "success");
     } catch (error) {
@@ -147,11 +144,19 @@
     }
     await loadTree();
     await loadCrossref();
-    const rootNodes = get(tree);
-    if (rootNodes.length > 0) {
-      selectedNode.set(rootNodes[0]);
+
+    const savedId = localStorage.getItem("janus_selected_node_id");
+    const nodeMap = get(flatNodeMap);
+
+    if (savedId && nodeMap.has(savedId)) {
+      selectedNode.set(nodeMap.get(savedId)!);
     } else {
-      selectedNode.set(null);
+      const rootNodes = get(tree);
+      if (rootNodes.length > 0) {
+        selectedNode.set(rootNodes[0]);
+      } else {
+        selectedNode.set(null);
+      }
     }
   });
 
@@ -161,11 +166,7 @@
       await loadTree();
       await loadCrossref();
       const rootNodes = get(tree);
-      if (rootNodes.length > 0) {
-        selectedNode.set(rootNodes[0]);
-      } else {
-        selectedNode.set(null);
-      }
+      if (rootNodes.length > 0) selectedNode.set(rootNodes[0]);
     } catch (error) {
       notify("Import cancelled or failed.", "error");
     }
@@ -176,7 +177,6 @@
       await applyPatchFromClipboard();
       await loadTree();
       await loadCrossref();
-      selectedNode.set(null);
     } catch (error) {
       notify("Patch application cancelled or failed.", "error");
     }

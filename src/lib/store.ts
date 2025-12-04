@@ -20,6 +20,18 @@ export const theme = writable({
   relationships: DEFAULT_RELATIONSHIP_COLORS
 });
 
+selectedNode.subscribe((node) => {
+  if (typeof localStorage !== 'undefined') {
+    if (node) {
+      localStorage.setItem('janus_selected_node_id', node.id);
+    } else {
+      // We don't remove the key here to prevent losing context on accidental deselects
+      // or during reload cycles, unless explicitly desired. 
+      // For now, keeping the last known ID is usually better UX.
+    }
+  }
+});
+
 // A derived store that holds a map of all nodes by their ID for fast lookups
 export const flatNodeMap = derived(tree, ($tree) => {
   const map = new Map<string, TreeNode>();
