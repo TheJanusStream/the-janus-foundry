@@ -50,6 +50,11 @@
     }
   }
 
+  $: executableChildren =
+    $selectedNode?.children?.filter(
+      (c) => c.type.startsWith("Exec:") && c.type !== "Exec:Output",
+    ) || [];
+
   function startResize(event: MouseEvent) {
     document.body.classList.add("resizing");
     isResizing = true;
@@ -192,62 +197,80 @@
     }
   }
 
-  async function handleExecute() {
-    if (!$selectedNode || !isTauri()) return;
+  async function runExecutableNode(codeNode: StoreTreeNode) {
+    const { invoke } = await import("@tauri-apps/api/core");
+
+    // notify(`Executing ${codeNode.name}...`, "info"); // Optional: too noisy for batch?
 
     try {
-      const { invoke } = await import("@tauri-apps/api/core");
-
-      // Determine Source (Code) and Target (Output) based on context
-      let codeNode = $selectedNode;
-      let outputNodeId: string | undefined;
-
-      if ($selectedNode.type === "Exec:Output") {
-        // Context: Re-running from the Output node itself
-        const nodeMap = get(flatNodeMap);
-        if (!$selectedNode.parentId || !nodeMap.has($selectedNode.parentId)) {
-          throw new Error(
-            "Orphaned output node: cannot find parent executable.",
-          );
-        }
-        codeNode = nodeMap.get($selectedNode.parentId)!;
-        outputNodeId = $selectedNode.id;
-      } else {
-        // Context: Running from the Executable node
-        const children = $selectedNode.children || [];
-        const existingOutput = children.find((c) => c.type === "Exec:Output");
-        if (existingOutput) {
-          outputNodeId = existingOutput.id;
-        }
-      }
-
-      notify(`Executing ${codeNode.type.split(":")[1]}...`, "info");
-
       const output = (await invoke("execute_code", {
         language: codeNode.type,
         code: codeNode.description,
       })) as string;
 
-      if (outputNodeId) {
-        await updateNode(outputNodeId, { description: output });
+      const existingOutput = codeNode.children.find(
+        (c) => c.type === "Exec:Output",
+      );
+
+      if (existingOutput) {
+        await updateNode(existingOutput.id, { description: output });
       } else {
-        // Create new output node
-        const children = codeNode.children || [];
-        const newId = crypto.randomUUID();
         await db.nodes.add({
-          id: newId,
+          id: crypto.randomUUID(),
           parentId: codeNode.id,
           name: "Output",
           type: "Exec:Output",
           description: output,
-          sortOrder: children.length,
+          sortOrder: codeNode.children.length,
         });
       }
+    } catch (err) {
+      throw new Error(`Failed to execute ${codeNode.name}: ${err}`);
+    }
+  }
 
-      await loadTree(); // Refresh UI
+  async function handleExecute() {
+    if (!$selectedNode || !isTauri()) return;
+
+    try {
+      let codeNode: StoreTreeNode;
+
+      // Handle "Rerun Parent" context
+      if ($selectedNode.type === "Exec:Output") {
+        const nodeMap = get(flatNodeMap);
+        if (!$selectedNode.parentId || !nodeMap.has($selectedNode.parentId)) {
+          throw new Error("Orphaned output node.");
+        }
+        codeNode = nodeMap.get($selectedNode.parentId)!;
+      } else {
+        codeNode = $selectedNode;
+      }
+
+      notify(`Executing ${codeNode.type.split(":")[1]}...`, "info");
+      await runExecutableNode(codeNode);
+      await loadTree();
       notify("Execution successful.", "success");
     } catch (err) {
-      notify(`Execution failed: ${err}`, "error");
+      notify(`${err}`, "error");
+    }
+  }
+
+  async function handleRunAllChildren() {
+    if (!isTauri() || executableChildren.length === 0) return;
+
+    notify(
+      `Starting batch execution of ${executableChildren.length} nodes...`,
+      "info",
+    );
+
+    try {
+      for (const child of executableChildren) {
+        await runExecutableNode(child);
+      }
+      await loadTree();
+      notify("Batch execution complete.", "success");
+    } catch (err) {
+      notify(`${err}`, "error");
     }
   }
 
@@ -349,6 +372,15 @@
           <div class="view-mode">
             <h3>{$selectedNode.name}</h3>
             <p class="type-tag">Type: {$selectedNode.type}</p>
+
+            {#if isTauri() && executableChildren.length > 0}
+              <div class="batch-controls">
+                <button class="run-button" on:click={handleRunAllChildren}>
+                  ▶ Run {executableChildren.length} Children
+                </button>
+              </div>
+            {/if}
+
             <div class="description-content">
               {#if $selectedNode.type.startsWith("Exec:") || $selectedNode.type.startsWith("SysConfig:")}
                 {#if isTauri() && $selectedNode.type.startsWith("Exec:")}
@@ -664,6 +696,10 @@
   .divider:hover {
     background-color: #fdc349;
   }
+  .batch-controls {
+    margin-bottom: 15px;
+  }
+
   .code-header {
     display: flex;
     justify-content: space-between;
