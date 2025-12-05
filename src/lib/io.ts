@@ -228,20 +228,14 @@ function inferRelationship(
     nodeMap: Map<string, Node>,
     config: CognitiveConfig
 ): string {
-    // 1. Structural Analysis (Intrinsic to DB)
-    if (nodeA.parentId === nodeB.id) return config.systemRelations.is_child_of;
-    if (nodeB.parentId === nodeA.id) return config.systemRelations.has_child;
-    if (nodeA.parentId && nodeA.parentId === nodeB.parentId) return config.systemRelations.is_sibling_of;
-    if (isAncestor(nodeA.id, nodeB.id, nodeMap)) return config.systemRelations.is_descendant_of;
-    if (isAncestor(nodeB.id, nodeA.id, nodeMap)) return config.systemRelations.is_ancestor_of;
 
-    // 2. Explicit Reference Parsing (Intrinsic to Content)
+    // 1. Explicit Reference Parsing (Intrinsic to Content)
     if (nodeA.description.includes(nodeB.id)) return config.systemRelations.explicitly_references;
     if (nodeB.description.includes(nodeA.id)) return config.systemRelations.is_referenced_by;
     if (nodeA.type === 'ReferenceValue' && nodeA.description.trim() === nodeB.id) return config.systemRelations.points_to;
     if (nodeB.type === 'ReferenceValue' && nodeB.description.trim() === nodeA.id) return config.systemRelations.is_pointed_to_by;
 
-    // 3. Dynamic Type-to-Type Logic
+    // 2. Dynamic Type-to-Type Logic
     const typeRuleKey1 = `${nodeA.type}->${nodeB.type}`;
     if (config.typeRules[typeRuleKey1]) return config.typeRules[typeRuleKey1];
 
@@ -251,7 +245,7 @@ function inferRelationship(
         if (inverse) return inverse;
     }
 
-    // 4. Dynamic Keyword-Based Verb Extraction
+    // 3. Dynamic Keyword-Based Verb Extraction
     const textA = (nodeA.name + ' ' + nodeA.description).toLowerCase();
     const sentencesA = textA.split('. ');
     for (const keyword of sharedKeywords) {
@@ -266,6 +260,14 @@ function inferRelationship(
             }
         }
     }
+
+    // 4. Structural Analysis (Intrinsic to DB)
+    if (nodeA.parentId === nodeB.id) return config.systemRelations.is_child_of;
+    if (nodeB.parentId === nodeA.id) return config.systemRelations.has_child;
+    if (nodeA.parentId && nodeA.parentId === nodeB.parentId) return config.systemRelations.is_sibling_of;
+    if (isAncestor(nodeA.id, nodeB.id, nodeMap)) return config.systemRelations.is_descendant_of;
+    if (isAncestor(nodeB.id, nodeA.id, nodeMap)) return config.systemRelations.is_ancestor_of;
+
 
     // 5. Default Fallback
     return config.systemRelations.default;
