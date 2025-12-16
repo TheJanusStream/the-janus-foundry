@@ -11,6 +11,7 @@
     flatNodeMap,
   } from "$lib/store";
   import { db, updateNode, createNode } from "$lib/db";
+  import { generatePrologContext } from "$lib/prolog";
   import TreeNode from "$lib/components/TreeNode.svelte";
   import Orrery from "$lib/components/Orrery.svelte";
   import StatsPanel from "$lib/components/StatsPanel.svelte";
@@ -200,12 +201,18 @@
   async function runExecutableNode(codeNode: StoreTreeNode) {
     const { invoke } = await import("@tauri-apps/api/core");
 
-    // notify(`Executing ${codeNode.name}...`, "info"); // Optional: too noisy for batch?
-
     try {
+      let context: string | null = null;
+
+      // Dynamic Context Injection for Prolog
+      if (codeNode.type === "Exec:Prolog") {
+        context = generatePrologContext();
+      }
+
       const output = (await invoke("execute_code", {
         language: codeNode.type,
         code: codeNode.description,
+        context: context, // Pass the generated facts
       })) as string;
 
       const existingOutput = codeNode.children.find(
