@@ -256,6 +256,7 @@
       notify(`Executing ${codeNode.type.split(":")[1]}...`, "info");
       await runExecutableNode(codeNode);
       await loadTree();
+      await loadCrossref();
       notify("Execution successful.", "success");
     } catch (err) {
       notify(`${err}`, "error");
@@ -275,6 +276,7 @@
         await runExecutableNode(child);
       }
       await loadTree();
+      await loadCrossref();
       notify("Batch execution complete.", "success");
     } catch (err) {
       notify(`${err}`, "error");
