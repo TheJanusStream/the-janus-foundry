@@ -1,4 +1,3 @@
-// src/lib/prolog.ts
 import { get } from 'svelte/store';
 import { flatNodeMap, crossref } from './store';
 
@@ -25,6 +24,7 @@ export function generatePrologContext(): string {
     for (const node of nodes.values()) {
         const pId = node.parentId ? escape(node.parentId) : 'null';
         facts += `node(${escape(node.id)}, ${escape(node.name)}, ${escape(node.type)}, ${pId}).\n`;
+        facts += `description(${escape(node.id)}, ${escape(node.description)}).\n`;
     }
 
     // 2. Links
@@ -38,6 +38,7 @@ export function generatePrologContext(): string {
     facts += `
     node_property(ID, 'Name', Val) :- node(ID, Val, _, _).
     node_property(ID, 'Type', Val) :- node(ID, _, Val, _).
+    node_property(ID, 'Description', Val) :- description(ID, Val).
     is_type(ID, Type) :- node(ID, _, Type, _).
     root_node(ID) :- node(ID, _, _, 'null').
     
