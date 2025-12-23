@@ -199,15 +199,48 @@
   }
 
   async function runExecutableNode(codeNode: StoreTreeNode) {
+    if (codeNode.type === "Exec:Prolog") {
+      return new Promise((resolve, reject) => {
+        const context = generatePrologContext();
+        const worker = new Worker(
+          new URL("$lib/workers/prolog.worker.ts", import.meta.url),
+          { type: "module" },
+        );
+
+        worker.onmessage = async (e) => {
+          if (e.data.type === "RESULT") {
+            const output = e.data.output;
+            const existingOutput = codeNode.children.find(
+              (c) => c.type === "Exec:Output",
+            );
+            if (existingOutput) {
+              await updateNode(existingOutput.id, { description: output });
+            } else {
+              await db.nodes.add({
+                id: crypto.randomUUID(),
+                parentId: codeNode.id,
+                name: "Output",
+                type: "Exec:Output",
+                description: output,
+                sortOrder: codeNode.children.length,
+              });
+            }
+            worker.terminate();
+            resolve(output);
+          } else if (e.data.type === "ERROR") {
+            worker.terminate();
+            reject(e.data.message);
+          }
+        };
+
+        worker.postMessage({ context, code: codeNode.description });
+      });
+    }
+
     const { invoke } = await import("@tauri-apps/api/core");
 
     try {
       let context: string | null = null;
-
-      // Dynamic Context Injection for Prolog
-      if (codeNode.type === "Exec:Prolog") {
-        context = generatePrologContext();
-      }
 
       const output = (await invoke("execute_code", {
         language: codeNode.type,

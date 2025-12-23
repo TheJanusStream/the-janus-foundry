@@ -18,7 +18,8 @@
     "@tauri-apps/plugin-opener": "^2.5.0",
     "dexie": "^4.2.1",
     "force-graph": "^1.51.0",
-    "svelte-exmarkdown": "^5.0.2"
+    "svelte-exmarkdown": "^5.0.2",
+    "trealla": "^0.28.9"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.6",
