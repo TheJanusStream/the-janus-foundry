@@ -237,6 +237,33 @@
       });
     }
 
+    if (
+      codeNode.type === "Exec:Javascript" ||
+      codeNode.type === "Exec:Typescript" ||
+      codeNode.type === "Exec:JS"
+    ) {
+      return new Promise((resolve, reject) => {
+        const worker = new Worker(
+          new URL("$lib/workers/javascript.worker.ts", import.meta.url),
+          { type: "module" },
+        );
+
+        worker.onmessage = async (e) => {
+          if (e.data.type === "RESULT") {
+            const output = e.data.output;
+            await handleOutput(codeNode, output);
+            worker.terminate();
+            resolve(output);
+          } else if (e.data.type === "ERROR") {
+            worker.terminate();
+            reject(e.data.message);
+          }
+        };
+
+        worker.postMessage({ code: codeNode.description });
+      });
+    }
+
     const { invoke } = await import("@tauri-apps/api/core");
 
     try {
@@ -266,6 +293,25 @@
       }
     } catch (err) {
       throw new Error(`Failed to execute ${codeNode.name}: ${err}`);
+    }
+  }
+
+  async function handleOutput(codeNode: StoreTreeNode, output: string) {
+    const existingOutput = codeNode.children.find(
+      (c) => c.type === "Exec:Output",
+    );
+
+    if (existingOutput) {
+      await updateNode(existingOutput.id, { description: output });
+    } else {
+      await db.nodes.add({
+        id: crypto.randomUUID(),
+        parentId: codeNode.id,
+        name: "Output",
+        type: "Exec:Output",
+        description: output,
+        sortOrder: codeNode.children.length,
+      });
     }
   }
 
@@ -413,6 +459,18 @@
         {#if !editMode}
           <div class="view-mode">
             <h3>{$selectedNode.name}</h3>
+
+            <div class="meta-row">
+              <p class="type-tag">Type: {$selectedNode.type}</p>
+              {#if ["Exec:Shell", "Exec:Python", "Exec:Node"].includes($selectedNode.type)}
+                <span class="system-badge" title="Requires Desktop App"
+                  >🖥️ System</span
+                >
+              {:else if ["Exec:Javascript", "Exec:Typescript", "Exec:Prolog"].includes($selectedNode.type)}
+                <span class="web-badge" title="Runs in Browser">🌐 Safe</span>
+              {/if}
+            </div>
+
             <p class="type-tag">Type: {$selectedNode.type}</p>
 
             {#if isTauri() && executableChildren.length > 0}
@@ -568,12 +626,38 @@
     border-radius: 4px;
     padding: 20px;
   }
+  .meta-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 15px;
+    margin-top: -5px;
+  }
   .type-tag {
+    margin: 0;
     font-style: italic;
     color: #fdc349;
     opacity: 0.8;
-    margin-top: -5px;
-    margin-bottom: 15px;
+  }
+  .system-badge {
+    font-size: 0.75em;
+    background-color: #30363d;
+    color: #f85149;
+    border: 1px solid #f85149;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+  .web-badge {
+    font-size: 0.75em;
+    background-color: #1e3a4c;
+    color: #39c5cf;
+    border: 1px solid #39c5cf;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
   }
   .description-content {
     background-color: #0d1117;
