@@ -416,16 +416,16 @@
         on:click={handleImportCore}
         title="Load Core"
       >
-        <img src="{base}/load_core_icon.png" alt="Load Core" />
+        <h2>Load</h2>
       </button>
       <button on:click={handleApplyPatch} title="Apply Patch from Clipboard">
-        <img src="{base}/apply_patch_icon.png" alt="Apply Patch" />
+        <h2>Patch</h2>
       </button>
       <button on:click={handleExport} title="Save Snapshot (Core + Crossref)">
-        <img src="{base}/save_core_icon.png" alt="Save Core" />
+        <h2>Save</h2>
       </button>
       <button on:click={handleSupportClick} title="Support the Forge">
-        <img src="{base}/support_janus_icon.png" alt="Support the Forge" />
+        <h2>Support</h2>
       </button>
     </div>
   </div>
@@ -470,8 +470,6 @@
                 <span class="web-badge" title="Runs in Browser">🌐 Safe</span>
               {/if}
             </div>
-
-            <p class="type-tag">Type: {$selectedNode.type}</p>
 
             {#if isTauri() && executableChildren.length > 0}
               <div class="batch-controls">
@@ -765,7 +763,6 @@
     display: flex;
     gap: 20px;
   }
-
   .core-interactions button {
     flex-grow: 1;
     padding: 0px;
@@ -773,23 +770,18 @@
     border: 1px solid #30363d;
     border-radius: 4px;
     cursor: pointer;
-    max-height: 96px;
+    max-height: 256px;
+    color: #39c5cf;
+    transition: all 0.2s ease-in-out;
   }
   .core-interactions button:hover:not(:disabled) {
     border-color: #39c5cf;
+    background-color: #21262d;
+    color: #fdc349;
   }
   .core-interactions button:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-  }
-  .core-interactions button img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    opacity: 0.8;
-  }
-  .core-interactions button:hover:not(:disabled) img {
-    opacity: 1;
   }
   .header-toggle-button {
     color: #39c5cf;
