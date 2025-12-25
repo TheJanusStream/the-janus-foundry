@@ -416,16 +416,16 @@
         on:click={handleImportCore}
         title="Load Core"
       >
-        <h2>Load</h2>
+        <img src="{base}/load.png" alt="Load Core" />
       </button>
       <button on:click={handleApplyPatch} title="Apply Patch from Clipboard">
-        <h2>Patch</h2>
+        <img src="{base}/patch.png" alt="Apply Patch" />
       </button>
       <button on:click={handleExport} title="Save Snapshot (Core + Crossref)">
-        <h2>Save</h2>
+        <img src="{base}/save.png" alt="Save Core" />
       </button>
       <button on:click={handleSupportClick} title="Support the Forge">
-        <h2>Support</h2>
+        <img src="{base}/support.png" alt="Support the Forge" />
       </button>
     </div>
   </div>
@@ -771,17 +771,24 @@
     border-radius: 4px;
     cursor: pointer;
     max-height: 256px;
-    color: #39c5cf;
     transition: all 0.2s ease-in-out;
   }
   .core-interactions button:hover:not(:disabled) {
     border-color: #39c5cf;
-    background-color: #21262d;
-    color: #fdc349;
   }
   .core-interactions button:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+  .core-interactions button img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0.5;
+    transition: all 0.2s ease-in-out;
+  }
+  .core-interactions button:hover:not(:disabled) img {
+    opacity: 1;
   }
   .header-toggle-button {
     color: #39c5cf;
