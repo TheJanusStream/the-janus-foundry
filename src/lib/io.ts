@@ -60,8 +60,8 @@ type PatchOperation = AddOperation | RemoveOperation | ReplaceOperation;
 
 // --- DEFAULT FALLBACKS (Factory Settings) ---
 const COMMON_WORD_PERCENTILE_THRESHOLD = 0.10;
-const MIN_SHARED_KEYWORDS_THRESHOLD = 2;
-const MAX_LINKS_PER_NODE = 7;
+const MIN_SHARED_KEYWORDS_THRESHOLD = 3;
+const MAX_LINKS_PER_NODE = 5;
 
 const DEFAULT_STOP_WORDS = new Set([
     'a', 'an', 'the', 'and', 'or', 'in', 'on', 'of', 'for', 'to', 'with', 'is', 'was', 'were', 'it', 'that', 'as', 'by', 'from',
@@ -414,15 +414,24 @@ export async function generateCrossReferences(): Promise<{ index: CrossRefIndex,
 
                 if (weight > maxWeight) maxWeight = weight;
 
-                if (weight >= MIN_SHARED_KEYWORDS_THRESHOLD) {
-                    const node1 = uuidToNodeMap.get(uuid1)!;
-                    const node2 = uuidToNodeMap.get(uuid2)!;
-                    const provenance = Array.from(sharedKeywords).sort();
+                const node1 = uuidToNodeMap.get(uuid1)!;
+                const node2 = uuidToNodeMap.get(uuid2)!;
+                const provenance = Array.from(sharedKeywords).sort();
 
-                    // PASS CONFIG HERE
-                    const relation = inferRelationship(node1, node2, provenance, uuidToNodeMap, config);
+                const relation = inferRelationship(node1, node2, provenance, uuidToNodeMap, config);
 
-                    // Use Configured Inverse Map
+                const structuralRels = new Set([
+                    config.systemRelations.default,
+                    config.systemRelations.is_child_of,
+                    config.systemRelations.has_child,
+                    config.systemRelations.is_sibling_of,
+                    config.systemRelations.is_descendant_of,
+                    config.systemRelations.is_ancestor_of
+                ]);
+                const isSemantic = !structuralRels.has(relation);
+
+                if (isSemantic || weight >= MIN_SHARED_KEYWORDS_THRESHOLD) {
+
                     const inverse = config.inverseRelations[relation] || relation;
 
                     if (!tempCrossrefs.has(uuid1)) tempCrossrefs.set(uuid1, []);
@@ -443,6 +452,20 @@ export async function generateCrossReferences(): Promise<{ index: CrossRefIndex,
             if (maxWeight > 0) {
                 confidence = maxWeight > 1 ? Math.log1p(link.weight) / Math.log1p(maxWeight) : 1.0;
             }
+
+            const structuralRels = new Set([
+                config.systemRelations.default,
+                config.systemRelations.is_child_of,
+                config.systemRelations.has_child,
+                config.systemRelations.is_sibling_of,
+                config.systemRelations.is_descendant_of,
+                config.systemRelations.is_ancestor_of
+            ]);
+
+            if (!structuralRels.has(link.relation)) {
+                confidence += 2.0;
+            }
+
             return {
                 target_id: link.target_id,
                 relation: link.relation,
@@ -455,7 +478,6 @@ export async function generateCrossReferences(): Promise<{ index: CrossRefIndex,
         finalCrossrefIndex[uuid] = processedLinks.slice(0, MAX_LINKS_PER_NODE);
     }
 
-    // Return BOTH the index and the loaded theme
     return { index: finalCrossrefIndex, theme: config.theme };
 }
 

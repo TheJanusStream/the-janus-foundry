@@ -263,11 +263,7 @@
                 class="relation-type"
                 title={`Confidence: ${rel.confidence}`}
               >
-                {#if rel.direction === "out"}
-                  {rel.relation.replace(/_/g, " ")}
-                {:else}
-                  is related to by
-                {/if}
+                {rel.relation.replace(/_/g, " ")}
               </span>
               <span class="node-name">{rel.name}</span>
             </li>
