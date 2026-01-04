@@ -30,7 +30,7 @@ export interface CognitiveConfig {
     relationshipVerbs: string[];
     inverseRelations: { [key: string]: string };
     typeRules: { [key: string]: string };
-    systemRelations: { [key: string]: string }; // <-- NEW
+    systemRelations: { [key: string]: string };
     theme: {
         nodes: { [key: string]: string };
         relationships: { [key: string]: string };
@@ -58,10 +58,18 @@ interface ReplaceOperation extends BasePatchOperation {
 }
 type PatchOperation = AddOperation | RemoveOperation | ReplaceOperation;
 
-// --- DEFAULT FALLBACKS (Factory Settings) ---
 const COMMON_WORD_PERCENTILE_THRESHOLD = 0.10;
 const MIN_SHARED_KEYWORDS_THRESHOLD = 3;
 const MAX_LINKS_PER_NODE = 5;
+
+const META_TYPES = new Set([
+    'TypeDefinition',
+    'TypeCollection',
+    'SystemConfiguration',
+    'Template'
+]);
+
+// --- DEFAULT FALLBACKS (Factory Settings) ---
 
 const DEFAULT_STOP_WORDS = new Set([
     'a', 'an', 'the', 'and', 'or', 'in', 'on', 'of', 'for', 'to', 'with', 'is', 'was', 'were', 'it', 'that', 'as', 'by', 'from',
@@ -366,6 +374,10 @@ export async function generateCrossReferences(): Promise<{ index: CrossRefIndex,
 
     // 3. Significant Keyword Extraction
     for (const node of allNodes) {
+        if (META_TYPES.has(node.type) || node.type.startsWith('SysConfig:') ||
+            node.type.startsWith('Exec:')) {
+            continue;
+        }
         const textContent = `${node.name} ${node.description}`;
         const initialKeywords = extractInitialKeywords(textContent);
         const significantKeywords = new Set([...initialKeywords].filter(kw => !finalStopWords.has(kw)));
