@@ -9,3 +9,7 @@ node_modules
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 target/rust-analyzer
+/.claude
+/.chainlink
+CHANGELOG.md
+foundry_primer*
