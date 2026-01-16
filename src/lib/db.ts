@@ -21,7 +21,6 @@ export class JanusFoundryDB extends Dexie {
       nodes: 'id, parentId, sortOrder'
     });
 
-    // Version 2: Add 'type' index for performance optimization (v1.0.9)
     // This optimizes fetchCognitiveConfig() which filters by type
     this.version(2).stores({
       nodes: 'id, parentId, sortOrder, type'
