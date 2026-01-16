@@ -11,13 +11,42 @@ A free open-source application for forging a persistent, co-evolving AI collabor
 - **ACTIVE SESSION:** This is where the collaboration happens. The **LLM** (The Foundation) powers this session, processing your specific context to reason and create.
 - **APPLY PATCHES:** When you reach a milestone, the session generates a **Patch**. You apply this back up to the Foundry, permanently updating the Core Memory.
 
+## Core Capabilities
+
+Unlike static wikis, The Foundry treats your data as **Active Memory**. It includes a set of engines designed to make the graph computational.
+
+### 1. The Executable Graph
+Nodes can contain code that executes directly within the application context. This allows your agent to perform "System Proprioception"—sensing the environment it lives in.
+
+*   **🌐 Safe Mode (Web & Desktop):**
+    *   `Exec:Javascript`: Runs in a sandboxed Web Worker. Used for data processing and API calls.
+    *   `Exec:Prolog`: Runs via Trealla WASM. Used for logic and reasoning.
+*   **🖥️ System Mode (Desktop Only):**
+    *   `Exec:Shell`: Executes Bash/Powershell on the host. Used for file manipulation and git operations.
+    *   `Exec:Python`: Executes via the system python interpreter. Used for complex analysis.
+
+> **⚠️ SECURITY WARNING:** System nodes (`Exec:Shell`, `Exec:Python`) run with **your user privileges** on the host machine. Never execute code from untrusted sources. You are the final gatekeeper.
+
+### 2. The Reasoning Engine (Prolog)
+The Foundry includes a built-in Prolog interpreter that treats your memory graph as a logic database. 
+
+*   **Graph Injection:** Before execution, the entire memory structure is automatically injected as Prolog facts: `node(ID, Name, Type, Parent)` and `link(Source, Target, Rel)`.
+*   **Structural Auditing:** You (or the Agent) can write logic queries to verify the structural integrity of projects, detect isolated nodes, or enforce consistency rules.
+
+### 3. Dynamic Cognitive Architecture
+The engine that powers the "Orrery" and "Cross-Reference" system is configurable *from within the graph itself*. By editing specific `SysConfig:*` nodes, you control the application logic:
+
+*   **`SysConfig:StopWords`**: Tune the noise filter for keyword extraction.
+*   **`SysConfig:TypeRules`**: Define semantic relationships based on Node Types (e.g., `Task -> Project` implies `is_task_of`).
+*   **`SysConfig:Theme`**: Customize the visual language (Colors/Shapes) of the Orrery.
+
 ## Begin Your Journey
 
 The only prerequisite is curiosity. This is not a tool for instant answers, but a workshop where patience and collaboration forge a partnership. Every skill you bring will enrich your shared journey. The Janus Foundry stores all data locally, offline and private. You are in control.
 
 ### 1. The Engine (Recommended)
-While The Foundry can work with any LLM, we highly recommend using **Gemini 3.0** via **AI Studio**.
-*   **Why?** Its massive context window allows it to hold your entire AI's memory in focus at once.
+While The Foundry can work with any LLM, we highly recommend using **Gemini 3.0 Pro** or **Gemini 3.0 Flash** via **AI Studio**.
+*   **Why?** The massive context window allows it to hold your entire AI's memory in focus at once.
 *   **How?** You act as the bridge, attaching Context to start the session, and applying Patches to save your progress.
 
 ### 2. The Janus Foundry (The Tool)
@@ -29,12 +58,6 @@ While The Foundry can work with any LLM, we highly recommend using **Gemini 3.0*
 ## Join the Conversation
 
 - Follow us on [Bluesky](https://bsky.app/profile/codewright.bsky.social)
-- Read [The Cartographer's Oath](https://docs.google.com/document/d/1xXxfoSSjWOQuqijOQKGt-27Q0Op--1_wrhdHqCq4p-A/edit?usp=sharing), our manifesto.
-- Read our [Article about Janus by Janus](https://docs.google.com/document/d/1SUmz63gi7QXLife38I92hRDef1jkFPK409TOO2k-CxA/edit?usp=sharing)
-- Watch us on [Youtube](https://www.youtube.com/@TheJanusStream)
-- Engage with us on [Discord](https://discord.gg/UUmU3jE5)
-- Meet us in [Second Life](https://world.secondlife.com/group/0943d162-aa28-86ae-b687-5f0267576862)
-- Support us on [Patreon](https://www.patreon.com/TheJanusStream)
 
 ## For Developers
 
