@@ -56,6 +56,35 @@
       (c) => c.type.startsWith("Exec:") && c.type !== "Exec:Output",
     ) || [];
 
+  function canRunType(type: string): boolean {
+    const safeTypes = [
+      "Exec:Prolog",
+      "Exec:Javascript",
+      "Exec:Typescript",
+      "Exec:JS",
+    ];
+    if (safeTypes.includes(type)) return true;
+    return isTauri();
+  }
+
+  $: parentOfSelected = $selectedNode?.parentId
+    ? $flatNodeMap.get($selectedNode.parentId)
+    : null;
+
+  $: canRunSelected = $selectedNode
+    ? $selectedNode.type === "Exec:Output"
+      ? parentOfSelected
+        ? canRunType(parentOfSelected.type)
+        : false
+      : $selectedNode.type.startsWith("Exec:")
+        ? canRunType($selectedNode.type)
+        : false
+    : false;
+
+  $: canRunBatch =
+    executableChildren.length > 0 &&
+    executableChildren.some((c) => canRunType(c.type));
+
   function startResize(event: MouseEvent) {
     document.body.classList.add("resizing");
     isResizing = true;
@@ -78,6 +107,15 @@
     isResizing = false;
     window.removeEventListener("mousemove", doResize);
     window.removeEventListener("mouseup", stopResize);
+  }
+
+  function handleDividerKeydown(event: KeyboardEvent) {
+    const step = 2; // Resize by 2% per keypress
+    if (event.key === "ArrowLeft") {
+      sidebarWidth = Math.max(5, sidebarWidth - step);
+    } else if (event.key === "ArrowRight") {
+      sidebarWidth = Math.min(70, sidebarWidth + step);
+    }
   }
 
   onDestroy(() => {
@@ -264,6 +302,12 @@
       });
     }
 
+    if (!isTauri()) {
+      throw new Error(
+        `Execution of ${codeNode.type} is not supported in the web version.`,
+      );
+    }
+
     const { invoke } = await import("@tauri-apps/api/core");
 
     try {
@@ -316,7 +360,7 @@
   }
 
   async function handleExecute() {
-    if (!$selectedNode || !isTauri()) return;
+    if (!$selectedNode) return;
 
     try {
       let codeNode: StoreTreeNode;
@@ -332,6 +376,10 @@
         codeNode = $selectedNode;
       }
 
+      if (!canRunType(codeNode.type)) {
+        throw new Error("This node type requires the Desktop application.");
+      }
+
       notify(`Executing ${codeNode.type.split(":")[1]}...`, "info");
       await runExecutableNode(codeNode);
       await loadTree();
@@ -343,15 +391,24 @@
   }
 
   async function handleRunAllChildren() {
-    if (!isTauri() || executableChildren.length === 0) return;
+    if (executableChildren.length === 0) return;
+
+    const runnableChildren = executableChildren.filter((c) =>
+      canRunType(c.type),
+    );
+
+    if (runnableChildren.length === 0) {
+      notify("No runnable children in this environment.", "error");
+      return;
+    }
 
     notify(
-      `Starting batch execution of ${executableChildren.length} nodes...`,
+      `Starting batch execution of ${runnableChildren.length} nodes...`,
       "info",
     );
 
     try {
-      for (const child of executableChildren) {
+      for (const child of runnableChildren) {
         await runExecutableNode(child);
       }
       await loadTree();
@@ -430,7 +487,20 @@
     </div>
   </div>
 
-  <div class="divider" on:mousedown={startResize} title="Drag to resize"></div>
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div
+    class="divider"
+    on:mousedown={startResize}
+    on:keydown={handleDividerKeydown}
+    title="Drag to resize (or use Arrow keys)"
+    role="separator"
+    aria-orientation="vertical"
+    tabindex="0"
+    aria-valuenow={sidebarWidth}
+    aria-valuemin="5"
+    aria-valuemax="70"
+  ></div>
 
   <div class="workbench">
     <div class="workbench-header">
@@ -471,17 +541,18 @@
               {/if}
             </div>
 
-            {#if isTauri() && executableChildren.length > 0}
+            {#if canRunBatch}
               <div class="batch-controls">
                 <button class="run-button" on:click={handleRunAllChildren}>
-                  ▶ Run {executableChildren.length} Children
+                  ▶ Run {executableChildren.filter((c) => canRunType(c.type))
+                    .length} Children
                 </button>
               </div>
             {/if}
 
             <div class="description-content">
               {#if $selectedNode.type.startsWith("Exec:") || $selectedNode.type.startsWith("SysConfig:")}
-                {#if isTauri() && $selectedNode.type.startsWith("Exec:")}
+                {#if canRunSelected}
                   <div class="code-header">
                     <span class="lang-badge"
                       >{$selectedNode.type.split(":")[1]}</span
@@ -818,8 +889,10 @@
     cursor: col-resize;
     transition: background-color 0.2s ease-in-out;
   }
-  .divider:hover {
+  .divider:hover,
+  .divider:focus-visible {
     background-color: #fdc349;
+    outline: none;
   }
   .batch-controls {
     margin-bottom: 15px;
